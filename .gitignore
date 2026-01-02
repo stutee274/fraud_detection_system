@@ -1,67 +1,130 @@
-# Python
+# ============================================
+# PYTHON
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual Environment (DON'T UPLOAD!)
 venv/
 env/
 ENV/
 .venv
 *.egg-info/
-dist/
-build/
 
-# Environment variables
+# ============================================
+# ENVIRONMENT VARIABLES (SECRETS!)
+# ============================================
 .env
 *.env
 .env.local
+.env.production
 
-# Database
+# ============================================
+# DATABASE FILES (DON'T UPLOAD!)
+# ============================================
 *.db
 *.sqlite
 *.sqlite3
 fraud_detection.db
 database/*.db
 
-# Logs
+# ============================================
+# LOGS (DON'T UPLOAD!)
+# ============================================
 *.log
 logs/
 fraud_detection.log
 
-# IDE
+# ============================================
+# IDE FILES (DON'T UPLOAD!)
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# ============================================
+# OS FILES (DON'T UPLOAD!)
+# ============================================
 .DS_Store
 Thumbs.db
 
-# Large model files (optional - keep if < 100MB)
-# models/*.pkl
-# models/*.joblib
-advanced_fraud_model.joblib
+# ============================================
+# MODELS - KEEP JSON, REMOVE BINARY
+# ============================================
+# Keep these (small, text-based):
+# ✅ models/*.json (fraud_model_banking.json, etc.)
+# ✅ models/features*.json
+# ✅ models/model_config*.json
 
-# Processed data (too large)
-processed/
+# Remove these (large binary files):
+models/*.pkl
+models/*.joblib
+*.pkl
+*.joblib
+
+# But keep scaler if small
+!models/scaler_banking.pkl
+!models/scaler.pkl
+!models/amount_scaler.pkl
+
+# ============================================
+# DATA FILES (TOO LARGE!)
+# ============================================
 data/*.csv
+data/raw/
+data/processed/
+processed/
+*.csv
 
-# React - CRITICAL!
+# Keep only small sample data if needed
+!data/sample_data.csv
+
+# ============================================
+# REACT (BIGGEST CULPRIT!)
+# ============================================
+# node_modules is 100+ MB - DON'T UPLOAD!
 fraud-detection-ui/node_modules/
 fraud-detection-ui/build/
 fraud-detection-ui/.env
 fraud-detection-ui/.env.local
+fraud-detection-ui/.env.production
 fraud-detection-ui/npm-debug.log*
 fraud-detection-ui/yarn-debug.log*
 fraud-detection-ui/yarn-error.log*
+fraud-detection-ui/.pnp
+fraud-detection-ui/.pnp.js
 
-# Cache files
+# ============================================
+# CACHE FILES (DON'T UPLOAD!)
+# ============================================
 *.cache
+.cache/
 genai_cache.json
+__pycache__/
 
-# Test files (optional)
+# ============================================
+# TEST FILES (DON'T UPLOAD!)
+# ============================================
 test*.py
 test*.ps1
+diagnose.py
+testapi.py
+
+# ============================================
+# BACKUP FILES (DON'T UPLOAD!)
+# ============================================
+*.backup
+*.bak
+*~
+
+# ============================================
+# BUILD FILES (DON'T UPLOAD!)
+# ============================================
+dist/
+build/
+*.egg-info/
