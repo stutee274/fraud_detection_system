@@ -1,0 +1,27 @@
+{
+  "model_type": "XGBoost",
+  "version": "2.0_improved",
+  "trained_date": "2025-12-31T21:27:23.267114",
+  "features_count": 44,
+  "training_samples": 40000,
+  "test_auc": 0.8136150421401638,
+  "false_positive_rate": 0.0007367025195226168,
+  "recommended_threshold": 0.55,
+  "default_threshold": 0.55,
+  "continuous_features": [
+    "amount",
+    "balance",
+    "spend_ratio",
+    "amount_vs_avg",
+    "amount_log",
+    "balance_log",
+    "hour",
+    "day_of_week",
+    "daily_count",
+    "avg_7d",
+    "failed_7d",
+    "card_age",
+    "distance",
+    "trust_score"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "model_version": "final_v1.0",
+  "training_date": "2025-12-24T17:09:39.654091",
+  "default_threshold": 0.7,
+  "recommended_thresholds": {
+    "high_security": 0.3,
+    "balanced": 0.7,
+    "high_precision": 0.7
+  },
+  "performance": {
+    "roc_auc": 0.9787007920078555,
+    "best_f1_score": 0.607773851590106,
+    "recall_at_best_f1": 0.8775510204081632,
+    "precision_at_best_f1": 0.4648648648648649
+  },
+  "feature_importance": {
+    "top_feature": "V14",
+    "top_importance": 0.2951589524745941,
+    "amount_features_total": 0.041946396231651306
+  },
+  "training_info": {
+    "total_samples": 284807,
+    "fraud_samples": 492,
+    "fraud_rate": 0.001727485630620034,
+    "features_count": 35,
+    "smote_ratio": 0.3,
+    "undersample_ratio": 0.6
+  }
+}
