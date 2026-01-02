@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Models (large files)
+models/*.pkl
+models/*.json
+models/backups/
+
+# Data (large files)
+data/*.csv
+data/*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+docs/_build/
+
+# Temporary files
+*.tmp
+*.bak
