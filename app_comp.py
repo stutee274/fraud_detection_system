@@ -182,7 +182,7 @@ class SimpleExplainer:
 # ============================================
 try:
     from dotenv import load_dotenv
-    load_dotenv(".env")
+    load_dotenv()
     GENAI_ENABLED = bool(os.getenv("GROQ_API_KEY"))
     if GENAI_ENABLED:
         from genai import explain_transaction
@@ -685,6 +685,6 @@ def shutdown(exception=None):
         close_database()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Starting server on port {port}")
+    port = int(os.getenv("PORT", 5000))
+    print(f"🚀 Starting Flask server on 0.0.0.0:{port}", flush=True)
     app.run(host="0.0.0.0", port=port, debug=False)
