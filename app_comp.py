@@ -32,7 +32,11 @@ from logging_config import log_api_request, log_prediction, log_feedback, log_er
 from auth_security import initialize_security, rate_limit, require_api_key
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[
+    "http://localhost:3000",  # Local development
+    "https://fraud-detection-system-snowy.vercel.app",  # Your Vercel URL
+    "https://*.vercel.app"  # All Vercel deployments
+])
 
 initialize_security(app)
 
