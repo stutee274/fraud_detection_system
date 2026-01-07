@@ -17,17 +17,17 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 from features.features_eng import engineer_features
 
 print("="*70)
-print("🎯 PROPER FRAUD DETECTION MODEL TRAINING")
+print("PROPER FRAUD DETECTION MODEL TRAINING")
 print("="*70)
 
 # Load data
-print("\n📂 Loading data...")
+print("\n Loading data...")
 df = pd.read_csv("data/creditcard.csv")
 print(f"Dataset shape: {df.shape}")
 print(f"Fraud cases: {df['Class'].sum()} ({df['Class'].mean()*100:.4f}%)")
 
 # Feature engineering
-print("\n🔧 Engineering features...")
+print("\n Engineering features...")
 df = engineer_features(df)
 
 # Separate features and target
@@ -44,7 +44,7 @@ X["Amount"] = amt_scaler.fit_transform(X[["Amount"]])
 print(f"Amount scaled - Mean: {amt_scaler.mean_[0]:.2f}, Std: {amt_scaler.scale_[0]:.2f}")
 
 # Train-test split with stratification
-print("\n📊 Splitting data (80% train, 20% test)...")
+print("\n Splitting data (80% train, 20% test)...")
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, stratify=y, random_state=42
 )
@@ -57,7 +57,7 @@ print(f"Test: {X_test.shape[0]:,} samples ({y_test.sum():,} frauds, {y_test.mean
 # ============================================
 
 print("\n" + "="*70)
-print("⚖️  BALANCED RESAMPLING (SMOTE + UnderSampling)")
+print(" BALANCED RESAMPLING (SMOTE + UnderSampling)")
 print("="*70)
 
 # Strategy: Combine SMOTE (oversample minority) with UnderSampling (undersample majority)
@@ -83,7 +83,7 @@ print(f"After UnderSampling: {X_train_balanced.shape[0]:,} samples ({y_train_bal
 # ============================================
 
 print("\n" + "="*70)
-print("🤖 TRAINING XGBOOST WITH OPTIMIZED PARAMETERS")
+print(" TRAINING XGBOOST WITH OPTIMIZED PARAMETERS")
 print("="*70)
 
 # These parameters are specifically tuned for fraud detection
