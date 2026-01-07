@@ -682,7 +682,14 @@ def stats():
 @app.teardown_appcontext
 def shutdown(exception=None):
     if DB_ENABLED:
-        close_database()
+        try:
+            close_database()
+        except Exception as e:
+            # Ignore pool already closed errors
+            pass
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204  # No content@app.route("/favicon.ico")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

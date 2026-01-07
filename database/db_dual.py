@@ -498,7 +498,12 @@ def init_database():
 
 def close_database():
     """Close database connections"""
-    db.close_all()
+    try:
+        if db.connection_pool and not db.connection_pool.closed:
+            db.close_all()
+    except Exception as e:
+        # Ignore if pool already closed
+        pass
 
 if __name__ == "__main__":
     print("\n🧪 Testing Database Connection...")
