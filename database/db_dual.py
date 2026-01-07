@@ -1,9 +1,7 @@
-# database/db_dual.py - Complete Dual Mode Database Module
+# database/db_dual.py - RAILWAY PRODUCTION VERSION
 """
-Database module for dual mode fraud detection (banking + credit card)
-- Stores both banking raw features and credit card V1-V28 features
-- Tracks transaction datetime for banking mode
-- Supports feedback for auto-retraining
+Database module for Railway deployment with DATABASE_URL support
+Supports both Railway (DATABASE_URL) and local development (DB_HOST, etc.)
 """
 
 import psycopg2
@@ -34,20 +32,33 @@ def convert_decimals(obj):
     return obj
 
 # ============================================
-# DATABASE CLASS
+# DATABASE CLASS (RAILWAY COMPATIBLE)
 # ============================================
 class Database:
-    """Database connection manager with dual mode support"""
+    """Database connection manager with Railway support"""
     
     def __init__(self):
         self.connection_pool = None
-        self.config = {
-            'host': os.getenv('DB_HOST', 'localhost'),
-            'port': int(os.getenv('DB_PORT', 5432)),
-            'database': os.getenv('DB_NAME', 'fraud_detection'),
-            'user': os.getenv('DB_USER', 'postgres'),
-            'password': os.getenv('DB_PASSWORD', 'postgres')
-        }
+        
+        # Check if DATABASE_URL exists (Railway/Production)
+        database_url = os.getenv('DATABASE_URL')
+        
+        if database_url:
+            # PRODUCTION MODE (Railway)
+            print("🚀 Using DATABASE_URL (Production Mode)")
+            self.config = {'dsn': database_url}
+            self.use_dsn = True
+        else:
+            # DEVELOPMENT MODE (Local)
+            print("🔧 Using individual DB vars (Development Mode)")
+            self.config = {
+                'host': os.getenv('DB_HOST', 'localhost'),
+                'port': int(os.getenv('DB_PORT', 5432)),
+                'database': os.getenv('DB_NAME', 'fraud_detection'),
+                'user': os.getenv('DB_USER', 'postgres'),
+                'password': os.getenv('DB_PASSWORD', 'postgres')
+            }
+            self.use_dsn = False
     
     def initialize_pool(self, minconn=1, maxconn=20):
         """Initialize connection pool"""
@@ -58,13 +69,22 @@ class Database:
                 except:
                     pass
             
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
-                minconn, maxconn, **self.config
-            )
+            if self.use_dsn:
+                # Railway: Use DATABASE_URL
+                self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+                    minconn, maxconn, **self.config
+                )
+            else:
+                # Local: Use individual parameters
+                self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+                    minconn, maxconn, **self.config
+                )
+            
             print("✅ Database connection pool created")
             return True
         except Exception as e:
             print(f"❌ Error creating connection pool: {e}")
+            print(f"   Config: {self.config if not self.use_dsn else 'DATABASE_URL'}")
             return False
     
     def ensure_pool(self):
@@ -113,25 +133,6 @@ db = Database()
 def save_prediction_to_db(prediction_data):
     """
     Save prediction to database (supports both banking and credit card)
-    
-    Args:
-        prediction_data: dict with keys depending on mode
-        
-    Banking mode requires:
-        - mode: 'banking'
-        - Transaction_Amount, Account_Balance, Timestamp
-        - All banking raw features
-        
-    Credit card mode requires:
-        - mode: 'credit_card'
-        - Amount, Time, V1-V28
-        
-    Common fields:
-        - prediction, fraud_probability, risk_level
-        - top_features (dict), ai_explanation (str)
-        
-    Returns:
-        prediction_id (int) or None if error
     """
     try:
         with db.get_cursor() as cursor:
@@ -331,14 +332,12 @@ def update_prediction_feedback(prediction_id, actual_class, feedback_note='', co
     """Update prediction with feedback"""
     try:
         with db.get_cursor() as cursor:
-            # Update predictions table
             cursor.execute("""
                 UPDATE predictions 
                 SET actual_class = %s, feedback_received_at = NOW()
                 WHERE id = %s
             """, (actual_class, prediction_id))
             
-            # Get prediction details
             cursor.execute("""
                 SELECT prediction, fraud_probability 
                 FROM predictions 
@@ -349,13 +348,11 @@ def update_prediction_feedback(prediction_id, actual_class, feedback_note='', co
             if pred_data:
                 predicted = pred_data['prediction']
                 
-                # Determine feedback type
                 if predicted == actual_class:
                     feedback_type = 'true_positive' if actual_class == 1 else 'true_negative'
                 else:
                     feedback_type = 'false_positive' if predicted == 1 else 'false_negative'
                 
-                # Insert into feedback table
                 cursor.execute("""
                     INSERT INTO feedback (
                         prediction_id, actual_class, feedback_type, 
@@ -371,7 +368,7 @@ def update_prediction_feedback(prediction_id, actual_class, feedback_note='', co
         return False
 
 def get_feedback_count(model_type=None, days=30):
-    """Get feedback count (for auto-retraining trigger)"""
+    """Get feedback count"""
     try:
         with db.get_cursor() as cursor:
             if model_type:
@@ -443,15 +440,11 @@ def get_feedback_data_for_retraining(model_type, limit=None):
                 print(f"⚠️  No feedback data for {model_type}")
                 return []
             
-            # Convert to list of dicts and ensure 'Class' exists
             data_list = []
             for r in results:
                 row_dict = convert_decimals(dict(r))
-                # Ensure 'Class' key exists (case-sensitive)
                 if 'Class' in row_dict:
                     data_list.append(row_dict)
-                else:
-                    print(f"⚠️  Row missing 'Class' column: {row_dict.keys()}")
             
             print(f"✅ Retrieved {len(data_list)} feedback samples for {model_type}")
             return data_list
@@ -500,41 +493,18 @@ def init_database():
     if success:
         print("✅ Database initialized successfully")
     else:
-        print("⚠️  Database initialization failed")
+        print("⚠️  Database initialization failed - continuing without DB")
     return success
 
 def close_database():
     """Close database connections"""
     db.close_all()
 
-# ============================================
-# TESTING
-# ============================================
 if __name__ == "__main__":
     print("\n🧪 Testing Database Connection...")
     
     if init_database():
         print("✅ Connection successful\n")
-        
-        # Test query
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT version, model_type FROM model_versions WHERE is_active = TRUE")
-                results = cursor.fetchall()
-                if results:
-                    print("Active models:")
-                    for r in results:
-                        print(f"  • {r['model_type']}: {r['version']}")
-                else:
-                    print("⚠️  No active models found")
-            
-            # Test feedback count
-            count = get_feedback_count()
-            print(f"\n✅ Total feedback: {count}")
-            
-        except Exception as e:
-            print(f"❌ Test query failed: {e}")
-        
         close_database()
     else:
         print("❌ Connection failed")
