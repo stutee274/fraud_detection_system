@@ -34,19 +34,20 @@ from auth_security import initialize_security, rate_limit, require_api_key
 
 app = Flask(__name__)
 
-CORS(
-    app,
-    resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:3000",
-                "https://fraud-detection-system-snowy.vercel.app"
-            ],
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-API-KEY"],
-        }
-    },
-    supports_credentials=True
+from flask_cors import CORS
+
+app = Flask(__name__)
+
+# SIMPLE CORS - WORKS EVERYWHERE
+CORS(app, 
+     origins=[
+         "http://localhost:3000",
+         "https://fraud-detection-system-snowy.vercel.app",
+         "https://*.vercel.app"
+     ],
+     allow_headers=["Content-Type", "X-API-Key", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     supports_credentials=True
 )
 
 initialize_security(app)
