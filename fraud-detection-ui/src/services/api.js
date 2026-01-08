@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://frauddetectionsystem-production.up.railway.app';
-const API_KEY = process.env.REACT_APP_API_KEY || 'your-api-key';
+const API_URL = process.env.REACT_APP_API_URL || 'https://frauddetectionsystem-port-5000.up.railway.app';
+const API_KEY = process.env.REACT_APP_API_KEY || '9M8WmlHhO7t8g1V-KlfDEa7OfmwUbyMd6TvkApXgoKk';
 
 const api = axios.create({
   baseURL: API_URL,

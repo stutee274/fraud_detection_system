@@ -36,13 +36,19 @@ app = Flask(__name__)
 
 CORS(
     app,
-    resources={r"/*": {"origins": [
-        "http://localhost:3000",
-        r"https://.*\.vercel\.app"
-    ]}},
+    resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:3000",
+                "https://fraud-detection-system-snowy.vercel.app"
+            ],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-API-KEY"],
+        }
+    },
     supports_credentials=True
 )
-methods=["POST","OPTIONS"]
+
 initialize_security(app)
 
 print("="*80)
