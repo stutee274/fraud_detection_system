@@ -44,12 +44,9 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # SIMPLE CORS - NO COMPLEX CONFIG
-CORS(app, 
-     origins="*",  # Allow all for now - we'll fix later
-     allow_headers=["Content-Type", "X-API-Key", "x-api-key", "Authorization"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     supports_credentials=False  # Changed to False for simplicity
-)
+# ULTRA-SIMPLE CORS
+CORS(app)  # Just this! Remove all complex config!
+
 
 initialize_security(app)
 
