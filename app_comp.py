@@ -39,15 +39,16 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # SIMPLE CORS - WORKS EVERYWHERE
+from flask_cors import CORS
+
+app = Flask(__name__)
+
+# SIMPLE CORS - NO COMPLEX CONFIG
 CORS(app, 
-     origins=[
-         "http://localhost:3000",
-         "https://fraud-detection-system-snowy.vercel.app",
-         "https://*.vercel.app"
-     ],
-     allow_headers=["Content-Type", "X-API-Key", "Authorization"],
+     origins="*",  # Allow all for now - we'll fix later
+     allow_headers=["Content-Type", "X-API-Key", "x-api-key", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     supports_credentials=True
+     supports_credentials=False  # Changed to False for simplicity
 )
 
 initialize_security(app)
