@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://frauddetectionsystem-port-5000.up.railway.app';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const API_KEY = process.env.REACT_APP_API_KEY || '9M8WmlHhO7t8g1V-KlfDEa7OfmwUbyMd6TvkApXgoKk';
 
 const api = axios.create({
@@ -24,7 +24,7 @@ export const submitFeedback = async (predictionId, actualClass, note) => {
   if (!predictionId) {
     throw new Error('Prediction ID is required');
   }
-  
+
   const response = await api.post(`/api/predictions/${predictionId}/feedback`, {
     actual_class: actualClass,
     feedback_note: note || ''

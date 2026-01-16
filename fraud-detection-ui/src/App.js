@@ -1,36 +1,73 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SignedIn, SignedOut, useUser } from '@clerk/clerk-react';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import './App.css';
+
+const DashboardWrapper = () => {
+  const { user } = useUser();
+  return <Dashboard user={user} />;
+};
 
 function App() {
-  const { user, isLoaded } = useUser();
+  const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 
-  // Show loading while Clerk loads
-  if (!isLoaded) {
+  if (!clerkPubKey) {
+    // Demo mode - no auth
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
-          <p className="text-white text-xl mt-4 font-semibold">Loading Fraud Detector...</p>
-        </div>
-      </div>
+      <Router>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <Dashboard 
+                user={{ 
+                  fullName: 'Demo User', 
+                  primaryEmailAddress: { emailAddress: 'demo@example.com' },
+                  imageUrl: 'https://via.placeholder.com/150'
+                }} 
+              />
+            } 
+          />
+          {/* Redirect all other routes to dashboard in demo mode */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     );
   }
 
   return (
-    <div className="App">
-      {/* When user is NOT signed in - Show Login/Signup */}
-      <SignedOut>
-        <Login />
-      </SignedOut>
-      
-      {/* When user IS signed in - Show Dashboard */}
-      <SignedIn>
-        <Dashboard user={user} />
-      </SignedIn>
-    </div>
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <SignedIn>
+                <DashboardWrapper />
+              </SignedIn>
+              <SignedOut>
+                 <Navigate to="/login" replace />
+              </SignedOut>
+            </>
+          }
+        />
+        <Route 
+          path="/login" 
+          element={
+            <>
+              <SignedIn>
+                <Navigate to="/" replace />
+              </SignedIn>
+              <SignedOut>
+                <Login />
+              </SignedOut>
+            </>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

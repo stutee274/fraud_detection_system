@@ -40,7 +40,7 @@ function StatsDashboard() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">System Statistics</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Predictions */}
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-lg">
@@ -64,7 +64,7 @@ function StatsDashboard() {
                 {stats.with_feedback || 0}
               </p>
             </div>
-            <div className="text-5xl opacity-50">✅</div>
+            <div className="text-5xl opacity-50">Done</div>
           </div>
         </div>
 
@@ -107,7 +107,7 @@ function StatsDashboard() {
         onClick={loadStats}
         className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
       >
-        🔄 Refresh Statistics
+        Refresh Statistics
       </button>
     </div>
   );
