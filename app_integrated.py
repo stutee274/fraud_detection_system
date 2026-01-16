@@ -29,18 +29,20 @@ CORS(app, resources={
         "origins": [
             "http://localhost:3000",
             "https://frauddetectionsystem-production.up.railway.app",
+            "https://fraud-detection-system-snowy.vercel.app",
             "https://*.vercel.app",
             "https://*.netlify.app",
-            "*"  # Allow all origins for testing (remove in production)
+            "*"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "X-API-Key", "Authorization"],
-        "supports_credentials": True
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "X-API-Key"]
     }
 })
 
 print("="*80)
-print("🎯 INTEGRATED FRAUD DETECTION SYSTEM")
+print(" INTEGRATED FRAUD DETECTION SYSTEM")
 print("="*80)
 
 # ============================================
@@ -142,9 +144,9 @@ GENAI_ENABLED = False
 try:
     from genai import explain_transaction
     GENAI_ENABLED = True
-    print("✅ GenAI: ENABLED")
+    print(" GenAI: ENABLED")
 except Exception as e:
-    print(f"⚠️  GenAI: DISABLED ({e})")
+    print(f" GenAI: DISABLED ({e})")
 
 print("="*80 + "\n")
 
