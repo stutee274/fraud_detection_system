@@ -54,8 +54,8 @@ threshold_banking = 0.55
 scaler_banking = None
 
 try:
-    model_banking = XGBClassifier()
-    model_banking.load_model("models/fraud_model_banking.json")
+    temp_model = XGBClassifier()
+    temp_model.load_model("models/fraud_model_banking.json")
     
     with open("models/features_banking.json") as f:
         features_banking = json.load(f)
@@ -63,12 +63,20 @@ try:
     with open("models/model_config_banking.json") as f:
         threshold_banking = json.load(f).get("default_threshold", 0.55)
     
-    scaler_banking = joblib.load("models/scaler_banking.pkl")
-    
+    # Try loading scaler, but don't fail hard if missing (just warn)
+    try:
+        scaler_banking = joblib.load("models/scaler_banking.pkl")
+    except:
+        print("⚠️  BANKING Model: Scaler not found (using unscaled values)")
+        scaler_banking = None
+        
+    model_banking = temp_model
     print(f"✅ BANKING Model: XGBoost ({len(features_banking)} features)")
     print(f"   Threshold: {threshold_banking}")
     
 except Exception as e:
+    model_banking = None
+    features_banking = None
     print(f"⚠️  BANKING Model: Not available ({e})")
 
 # ============================================
@@ -79,25 +87,36 @@ features_cc = None
 threshold_cc = 0.4
 
 try:
-    model_cc = XGBClassifier()
-    model_cc.load_model("models/fraud_model_final.json")
+    temp_model = XGBClassifier()
+    temp_model.load_model("models/fraud_model_final.json")
     
+    loaded_features = None
     if os.path.exists("models/features.json"):
         with open("models/features.json") as f:
-            features_cc = json.load(f)
+            loaded_features = json.load(f)
     elif os.path.exists("models/features.json"):
         with open("models/features.json") as f:
-            features_cc = json.load(f)
-    
-    if os.path.exists("models/model_config.json"):
-        with open("models/model_config.json") as f:
-            config = json.load(f)
-            threshold_cc = config.get("default_threshold", 0.4)
-    
-    print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
-    print(f"   Threshold: {threshold_cc}")
+            loaded_features = json.load(f)
+            
+    if loaded_features:
+        features_cc = loaded_features
+        model_cc = temp_model
+        
+        if os.path.exists("models/model_config.json"):
+            with open("models/model_config.json") as f:
+                config = json.load(f)
+                threshold_cc = config.get("default_threshold", 0.4)
+        
+        print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
+        print(f"   Threshold: {threshold_cc}")
+    else:
+        print("⚠️  CREDIT_CARD Model: Features file missing")
+        model_cc = None
     
 except Exception as e:
+    model_cc = None
+    features_cc = None
+    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
     print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
 
 # ============================================
