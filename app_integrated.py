@@ -615,7 +615,7 @@ def shutdown_session(exception=None):
 
 if __name__ == "__main__":
     print("\n🚀 Starting Integrated Fraud Detection Server...")
-    print("📍 http://localhost:5000\n")
+    print("📍 https://frauddetectionsystem-production.up.railway.app\n")
     print("Modes:")
     print("  • banking: Raw transaction data")
     print("  • credit_card: V1-V28 + Amount + Time\n")
