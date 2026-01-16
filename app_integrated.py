@@ -22,7 +22,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS Configuration for Production
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:3000",
+            "https://frauddetectionsystem-production.up.railway.app",
+            "https://*.vercel.app",
+            "https://*.netlify.app",
+            "*"  # Allow all origins for testing (remove in production)
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "X-API-Key", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 print("="*80)
 print("🎯 INTEGRATED FRAUD DETECTION SYSTEM")
@@ -65,8 +80,8 @@ try:
     model_cc = XGBClassifier()
     model_cc.load_model("models/fraud_model_final.json")
     
-    if os.path.exists("models/feature_names.json"):
-        with open("models/feature_names.json") as f:
+    if os.path.exists("models/features.json"):
+        with open("models/features.json") as f:
             features_cc = json.load(f)
     elif os.path.exists("models/features.json"):
         with open("models/features.json") as f:
@@ -614,9 +629,11 @@ def shutdown_session(exception=None):
             pass
 
 if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
     print("\n🚀 Starting Integrated Fraud Detection Server...")
-    print("📍 https://frauddetectionsystem-production.up.railway.app\n")
+    print(f"📍 Port: {port}\n")
     print("Modes:")
     print("  • banking: Raw transaction data")
     print("  • credit_card: V1-V28 + Amount + Time\n")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
