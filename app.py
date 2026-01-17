@@ -1,10 +1,11 @@
-# app_dual_complete.py - BANKING + CREDIT CARD Dual Mode
+# app_integrated.py - Complete Integrated Fraud Detection System
 """
-✅ TWO MODES:
-1. BANKING MODE: Raw transaction data (Transaction_Amount, Account_Balance, etc.)
-2. CREDIT_CARD MODE: Pre-processed V1-V28 + Amount + Time
-
-User selects mode via 'mode' parameter.
+✅ Dual Mode: Banking + Credit Card
+✅ Database: PostgreSQL with prediction tracking
+✅ Feedback: User feedback collection
+✅ Analytics: Dashboard statistics
+✅ Retraining: Auto-retraining when feedback threshold reached
+✅ Security: API key authentication and rate limiting
 """
 
 from flask import Flask, request, jsonify
@@ -12,101 +13,66 @@ from flask_cors import CORS
 import pandas as pd
 import numpy as np
 from xgboost import XGBClassifier
-from sklearn.ensemble import RandomForestClassifier
 import json
 import joblib
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS Configuration for Production
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:3000",
+            "https://fraud-detection-system-snowy.vercel.app",
+            "https://frauddetectionsystem-production.up.railway.app"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "X-API-Key", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 print("="*80)
-print(" DUAL MODE FRAUD DETECTION")
+print(" INTEGRATED FRAUD DETECTION SYSTEM")
 print("="*80)
-
-# ============================================
-# SIMPLE EXPLAINER
-# ============================================
-class SimpleExplainer:
-    def __init__(self, model, feature_names):
-        self.model = model
-        self.feature_names = feature_names
-        try:
-            self.importances = model.feature_importances_
-        except:
-            self.importances = np.ones(len(feature_names)) / len(feature_names)
-    
-    def explain(self, X, top_n=5):
-        try:
-            if isinstance(X, pd.DataFrame):
-                feature_values = X.iloc[0].values
-            else:
-                feature_values = X[0] if len(X.shape) > 1 else X
-            
-            contributions = feature_values * self.importances
-            proba = self.model.predict_proba(X)[0][1]
-            
-            abs_contributions = np.abs(contributions)
-            top_indices = np.argsort(abs_contributions)[-top_n:][::-1]
-            
-            top_features = []
-            for idx in top_indices:
-                contribution = float(contributions[idx])
-                top_features.append({
-                    "feature": self.feature_names[idx],
-                    "value": round(float(feature_values[idx]), 4),
-                    "shap_value": round(contribution, 4),
-                    "impact": "increases" if (contribution > 0 and proba > 0.5) or (contribution < 0 and proba < 0.5) else "decreases"
-                })
-            
-            return top_features
-        except:
-            return []
-
-# ============================================
-# GENAI
-# ============================================
-try:
-    from dotenv import load_dotenv
-    load_dotenv(".env")
-    GENAI_ENABLED = bool(os.getenv("GROQ_API_KEY"))
-    if GENAI_ENABLED:
-        from genai_dual import explain_transaction
-except:
-    GENAI_ENABLED = False
 
 # ============================================
 # LOAD BANKING MODEL
 # ============================================
 model_banking = None
 features_banking = None
-threshold_banking = 0.4
+threshold_banking = 0.55
 scaler_banking = None
-explainer_banking = None
 
 try:
-    if os.path.exists("models/fraud_model_banking.pkl"):
-        model_banking = joblib.load("models/fraud_model_banking.pkl")
-        model_type_banking = "RandomForest"
-    else:
-        model_banking = XGBClassifier()
-        model_banking.load_model("models/fraud_model_banking.json")
-        model_type_banking = "XGBoost"
+    temp_model = XGBClassifier()
+    temp_model.load_model("models/fraud_model_banking.json")
     
     with open("models/features_banking.json") as f:
         features_banking = json.load(f)
     
     with open("models/model_config_banking.json") as f:
-        threshold_banking = json.load(f).get("default_threshold", 0.4)
+        threshold_banking = json.load(f).get("default_threshold", 0.55)
     
-    scaler_banking = joblib.load("models/scaler_banking.pkl")
-    explainer_banking = SimpleExplainer(model_banking, features_banking)
-    
-    print(f"✅ BANKING Model: {model_type_banking} ({len(features_banking)} features)")
+    # Try loading scaler, but don't fail hard if missing (just warn)
+    try:
+        scaler_banking = joblib.load("models/scaler_banking.pkl")
+    except:
+        print("⚠️  BANKING Model: Scaler not found (using unscaled values)")
+        scaler_banking = None
+        
+    model_banking = temp_model
+    print(f"✅ BANKING Model: XGBoost ({len(features_banking)} features)")
     print(f"   Threshold: {threshold_banking}")
     
 except Exception as e:
+    model_banking = None
+    features_banking = None
     print(f"⚠️  BANKING Model: Not available ({e})")
 
 # ============================================
@@ -115,43 +81,92 @@ except Exception as e:
 model_cc = None
 features_cc = None
 threshold_cc = 0.4
-explainer_cc = None
 
 try:
-    # Load model
-    model_cc = XGBClassifier()
-    model_cc.load_model("models/fraud_model_final.json")
+    temp_model = XGBClassifier()
+    temp_model.load_model("models/fraud_model_final.json")
     
-    # Load features - try different possible names
-    if os.path.exists("models/feature_names.json"):
-        with open("models/feature_names.json") as f:
-            features_cc = json.load(f)
+    loaded_features = None
+    if os.path.exists("models/features.json"):
+        with open("models/features.json") as f:
+            loaded_features = json.load(f)
     elif os.path.exists("models/features.json"):
         with open("models/features.json") as f:
-            features_cc = json.load(f)
+            loaded_features = json.load(f)
+            
+    if loaded_features:
+        features_cc = loaded_features
+        model_cc = temp_model
+        
+        if os.path.exists("models/model_config.json"):
+            with open("models/model_config.json") as f:
+                config = json.load(f)
+                threshold_cc = config.get("default_threshold", 0.4)
+        
+        print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
+        print(f"   Threshold: {threshold_cc}")
     else:
-        raise FileNotFoundError("features.json or feature_names.json not found")
-    
-    # Load config
-    if os.path.exists("models/model_config.json"):
-        with open("models/model_config.json") as f:
-            config = json.load(f)
-            threshold_cc = config.get("default_threshold", config.get("recommended_thresholds", {}).get("balanced", 0.4))
-    
-    explainer_cc = SimpleExplainer(model_cc, features_cc)
-    
-    print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
-    print(f"   Threshold: {threshold_cc}")
+        print("⚠️  CREDIT_CARD Model: Features file missing")
+        model_cc = None
     
 except Exception as e:
+    model_cc = None
+    features_cc = None
+    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
     print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
 
-print("="*80)
-print(f"🤖 GenAI: {'✅ ENABLED' if GENAI_ENABLED else '⚠️  FALLBACK'}")
+# ============================================
+# LOAD DATABASE
+# ============================================
+DB_ENABLED = False
+try:
+    from database.db_dual import (
+        init_database,
+        close_database,
+        save_prediction_to_db,
+        get_prediction_by_id,
+        get_recent_predictions,
+        update_prediction_feedback,
+        get_feedback_count
+    )
+    
+    DB_ENABLED = init_database()
+    if DB_ENABLED:
+        print("✅ Database: CONNECTED")
+    else:
+        print("⚠️  Database: DISABLED (continuing without DB)")
+except Exception as e:
+    print(f"⚠️  Database: DISABLED ({e})")
+
+# ============================================
+# LOAD ANALYTICS & RETRAINING
+# ============================================
+try:
+    from routes.analytics_routes import register_analytics_routes
+    from routes.retraining_routes import register_retraining_routes, auto_trigger_retraining
+    
+    register_analytics_routes(app)
+    register_retraining_routes(app)
+    print("✅ Analytics & Retraining: ENABLED")
+except Exception as e:
+    print(f"⚠️  Analytics & Retraining: DISABLED ({e})")
+    auto_trigger_retraining = None
+
+# ============================================
+# LOAD GENAI
+# ============================================
+GENAI_ENABLED = False
+try:
+    from routes.genai import explain_transaction
+    GENAI_ENABLED = True
+    print(" GenAI: ENABLED")
+except Exception as e:
+    print(f" GenAI: DISABLED ({e})")
+
 print("="*80 + "\n")
 
 # ============================================
-# BANKING MODE FEATURES
+# FEATURE ENGINEERING - BANKING
 # ============================================
 def prepare_banking_features(data):
     """Prepare banking features matching train_banking.py"""
@@ -174,7 +189,7 @@ def prepare_banking_features(data):
         day_of_week = dt.weekday()
     except:
         hour = 12
-        day_of_week = 2 # Wednesday
+        day_of_week = 2
     
     is_weekend = 1 if day_of_week >= 5 else 0
 
@@ -288,7 +303,7 @@ def prepare_banking_features(data):
          except Exception as e:
              print(f"Scaling error: {e}")
     
-    # Return features in correct order, filling missing with 0
+    # Return features in correct order
     final_df = pd.DataFrame()
     for col in features_banking:
         if col in df.columns:
@@ -299,7 +314,7 @@ def prepare_banking_features(data):
     return final_df
 
 # ============================================
-# CREDIT CARD MODE FEATURES
+# FEATURE ENGINEERING - CREDIT CARD
 # ============================================
 def prepare_credit_card_features(data):
     """Prepare credit card features (V1-V28 + Amount + Time)"""
@@ -333,6 +348,49 @@ def prepare_credit_card_features(data):
     return df[available]
 
 # ============================================
+# SIMPLE EXPLAINER
+# ============================================
+class SimpleExplainer:
+    def __init__(self, model, feature_names):
+        self.model = model
+        self.feature_names = feature_names
+        try:
+            self.importances = model.feature_importances_
+        except:
+            self.importances = np.ones(len(feature_names)) / len(feature_names)
+    
+    def explain(self, X, top_n=5):
+        try:
+            if isinstance(X, pd.DataFrame):
+                feature_values = X.iloc[0].values
+            else:
+                feature_values = X[0] if len(X.shape) > 1 else X
+            
+            contributions = feature_values * self.importances
+            proba = self.model.predict_proba(X)[0][1]
+            
+            abs_contributions = np.abs(contributions)
+            top_indices = np.argsort(abs_contributions)[-top_n:][::-1]
+            
+            top_features = []
+            for idx in top_indices:
+                contribution = float(contributions[idx])
+                top_features.append({
+                    "feature": self.feature_names[idx],
+                    "value": round(float(feature_values[idx]), 4),
+                    "shap_value": round(contribution, 4),
+                    "impact": "increases" if (contribution > 0 and proba > 0.5) or (contribution < 0 and proba < 0.5) else "decreases"
+                })
+            
+            return top_features
+        except:
+            return []
+
+# Create explainers
+explainer_banking = SimpleExplainer(model_banking, features_banking) if model_banking else None
+explainer_cc = SimpleExplainer(model_cc, features_cc) if model_cc else None
+
+# ============================================
 # FALLBACK EXPLANATION
 # ============================================
 def generate_fallback(pred, proba, top_features, amount):
@@ -351,12 +409,13 @@ def generate_fallback(pred, proba, top_features, amount):
     return exp
 
 # ============================================
-# API
+# MAIN PREDICTION ENDPOINT
 # ============================================
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
         "status": "healthy",
+        "service": "Integrated Fraud Detection System",
         "modes": {
             "banking": {
                 "available": model_banking is not None,
@@ -366,7 +425,9 @@ def home():
                 "available": model_cc is not None,
                 "features": len(features_cc) if features_cc else 0
             }
-        }
+        },
+        "database": DB_ENABLED,
+        "genai": GENAI_ENABLED
     })
 
 @app.route("/predict", methods=["POST"])
@@ -383,8 +444,8 @@ def predict():
             
             features_df = prepare_credit_card_features(data)
             proba = model_cc.predict_proba(features_df)[0][1]
-            pred = int(proba >= 0.4)
-            top_features = explainer_cc.explain(features_df, 5)
+            pred = int(proba >= threshold_cc)
+            top_features = explainer_cc.explain(features_df, 5) if explainer_cc else []
             amount = float(data.get('Amount', 0))
             threshold = threshold_cc
             model_name = "Credit Card (V1-V28)"
@@ -396,8 +457,8 @@ def predict():
             
             features_df = prepare_banking_features(data)
             proba = model_banking.predict_proba(features_df)[0][1]
-            pred = int(proba >= 0.45)
-            top_features = explainer_banking.explain(features_df, 5)
+            pred = int(proba >= threshold_banking)
+            top_features = explainer_banking.explain(features_df, 5) if explainer_banking else []
             amount = float(data.get('Transaction_Amount', 0))
             threshold = threshold_banking
             model_name = "Banking"
@@ -411,7 +472,29 @@ def predict():
         else:
             ai_exp = generate_fallback(pred, proba, top_features, amount)
         
-        return jsonify({
+        # Save to database
+        prediction_id = None
+        if DB_ENABLED:
+            try:
+                db_data = {
+                    'mode': mode,
+                    'prediction': pred,
+                    'fraud_probability': float(proba),
+                    'risk_level': risk,
+                    'threshold_used': threshold,
+                    'top_features': top_features,
+                    'ai_explanation': ai_exp,
+                    'ai_provider': 'groq' if GENAI_ENABLED else 'fallback',
+                    'api_endpoint': '/api/check-fraud',
+                    'request_ip': request.remote_addr,
+                    **data  # Include all original data
+                }
+                
+                prediction_id = save_prediction_to_db(db_data)
+            except Exception as e:
+                print(f"❌ Error saving to database: {e}")
+        
+        response = {
             "status": "success",
             "mode": mode,
             "model_used": model_name,
@@ -424,15 +507,150 @@ def predict():
             "ai_explanation": ai_exp,
             "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Normal",
             "transaction_amount": amount
-        })
+        }
+        
+        if prediction_id:
+            response['prediction_id'] = prediction_id
+        
+        return jsonify(response)
         
     except Exception as e:
         import traceback
         return jsonify({"status": "error", "message": str(e), "trace": traceback.format_exc()}), 500
 
+# ============================================
+# DATABASE ENDPOINTS
+# ============================================
+@app.route("/api/predictions/<int:prediction_id>", methods=["GET"])
+def get_prediction(prediction_id):
+    """Get prediction by ID"""
+    if not DB_ENABLED:
+        return jsonify({"status": "error", "message": "Database not available"}), 503
+    
+    try:
+        prediction = get_prediction_by_id(prediction_id)
+        
+        if prediction:
+            return jsonify({
+                "status": "success",
+                "prediction": prediction
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Prediction not found"
+            }), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/predictions", methods=["GET"])
+def get_predictions():
+    """Get recent predictions"""
+    if not DB_ENABLED:
+        return jsonify({"status": "error", "message": "Database not available"}), 503
+    
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        predictions = get_recent_predictions(limit)
+        
+        return jsonify({
+            "status": "success",
+            "count": len(predictions),
+            "predictions": predictions
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/predictions/<int:prediction_id>/feedback", methods=["POST"])
+def submit_feedback(prediction_id):
+    """Submit feedback for a prediction"""
+    if not DB_ENABLED:
+        return jsonify({"status": "error", "message": "Database not available"}), 503
+    
+    try:
+        data = request.get_json()
+        actual_class = data.get('actual_class')
+        feedback_note = data.get('feedback_note', '')
+        
+        if actual_class not in [0, 1]:
+            return jsonify({
+                "status": "error",
+                "message": "actual_class must be 0 (normal) or 1 (fraud)"
+            }), 400
+        
+        success = update_prediction_feedback(
+            prediction_id,
+            actual_class,
+            feedback_note
+        )
+        
+        if success:
+            # Auto-trigger retraining check
+            if auto_trigger_retraining:
+                try:
+                    auto_trigger_retraining()
+                except Exception as e:
+                    print(f"⚠️  Auto-trigger check failed: {e}")
+            
+            return jsonify({
+                "status": "success",
+                "message": "Feedback recorded successfully",
+                "prediction_id": prediction_id
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Failed to record feedback"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/stats", methods=["GET"])
+def get_stats():
+    """Get basic statistics"""
+    if not DB_ENABLED:
+        return jsonify({
+            "total_predictions": 0,
+            "with_feedback": 0,
+            "feedback_rate": 0,
+            "by_model": {"banking": 0, "credit_card": 0}
+        })
+    
+    try:
+        # This would call database functions
+        return jsonify({
+            "total_predictions": 0,
+            "with_feedback": 0,
+            "feedback_rate": 0,
+            "by_model": {"banking": 0, "credit_card": 0}
+        })
+    except Exception as e:
+        return jsonify({
+            "total_predictions": 0,
+            "with_feedback": 0,
+            "feedback_rate": 0,
+            "by_model": {"banking": 0, "credit_card": 0}
+        })
+
+# ============================================
+# SHUTDOWN HANDLER
+# ============================================
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    """Close database on shutdown"""
+    if DB_ENABLED:
+        try:
+            close_database()
+        except:
+            pass
+
 if __name__ == "__main__":
-    print("🚀 Dual Mode Server: http://localhost:5000")
-    print("\nModes:")
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    print("\n🚀 Starting Integrated Fraud Detection Server...")
+    print(f"📍 Port: {port}\n")
+    print("Modes:")
     print("  • banking: Raw transaction data")
     print("  • credit_card: V1-V28 + Amount + Time\n")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)

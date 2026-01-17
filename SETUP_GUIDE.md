@@ -4,7 +4,7 @@
 
 ### Backend (Integrated System)
 
-The integrated backend (`app_integrated.py`) includes:
+The integrated backend (`app.py`) includes:
 - ✅ Dual Mode: Banking + Credit Card fraud detection
 - ✅ Database: PostgreSQL with prediction tracking
 - ✅ Feedback: User feedback collection and tracking
@@ -21,7 +21,7 @@ cd fraud_detection
 .\venv\Scripts\activate
 
 # Start the integrated server
-python app_integrated.py
+python app.py
 ```
 
 The server will start on `http://localhost:5000`
@@ -43,7 +43,7 @@ The UI will open at `http://localhost:3000`
 
 ### Backend Components
 
-1. **app_integrated.py** - Main integrated application
+1. **app.py** - Main integrated application
    - Dual-mode fraud detection (Banking + Credit Card)
    - Database integration
    - Analytics and retraining routes

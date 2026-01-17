@@ -484,6 +484,55 @@ def get_model_performance():
         print(f"❌ Error fetching model performance: {e}")
         return []
 
+def setup_schema_if_needed():
+    """Check if tables exist and create them if they don't"""
+    try:
+        with db.get_cursor() as cursor:
+            # Check if predictions table exists (as a proxy for the whole schema)
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'predictions'
+                )
+            """)
+            exists = cursor.fetchone()['exists']
+            
+            if not exists:
+                print("⚠️  Database tables missing. Initializing schema...")
+                
+                # Try multiple possible paths for schema file
+                schema_paths = [
+                    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'schema_dual.sql'),
+                    os.path.join(os.getcwd(), 'database', 'schema_dual.sql'),
+                    'schema_dual.sql'
+                ]
+                
+                schema_path = None
+                for p in schema_paths:
+                    if os.path.exists(p):
+                        schema_path = p
+                        break
+                
+                if schema_path:
+                    with open(schema_path, 'r') as f:
+                        schema_sql = f.read()
+                    
+                    # Remove lines starting with COMMIT or SELECT verification for script stability
+                    clean_sql = "\n".join([line for line in schema_sql.split('\n') 
+                                        if not line.strip().upper().startswith('COMMIT')
+                                        and not line.strip().upper().startswith('SELECT')])
+                    
+                    cursor.execute(clean_sql)
+                    print("✅ Database schema initialized successfully")
+                else:
+                    print(f"❌ Schema file (schema_dual.sql) not found in expected locations.")
+            else:
+                # print("✅ Database tables found")
+                pass
+                
+    except Exception as e:
+        print(f"❌ Error setting up database schema: {e}")
+
 # ============================================
 # INITIALIZATION
 # ============================================
@@ -491,7 +540,10 @@ def init_database():
     """Initialize database connection"""
     success = db.initialize_pool()
     if success:
-        print("✅ Database initialized successfully")
+        print("✅ Database connection pool created")
+        # Try to setup schema
+        setup_schema_if_needed()
+        print("✅ Database initialization complete")
     else:
         print("⚠️  Database initialization failed - continuing without DB")
     return success

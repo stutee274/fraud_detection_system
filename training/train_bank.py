@@ -31,7 +31,7 @@ print("="*80)
 # ============================================
 # LOAD DATASET
 # ============================================
-print(" Loading dataset...")
+print("\n1 Loading dataset...")
 df = pd.read_csv(r"data\synthetic_fraud.csv")
 
 print(f"   Total: {len(df):,} transactions")
@@ -41,7 +41,7 @@ print(f"   Normal: {(~df['Fraud_Label'].astype(bool)).sum():,} ({(~df['Fraud_Lab
 # ============================================
 # FEATURE ENGINEERING (CLEAN)
 # ============================================
-print(" Engineering features...")
+print("\n2️⃣ Engineering features...")
 
 df['Timestamp'] = pd.to_datetime(df['Timestamp'])
 df['Hour'] = df['Timestamp'].dt.hour

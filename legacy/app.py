@@ -1,0 +1,438 @@
+# app_dual_complete.py - BANKING + CREDIT CARD Dual Mode
+"""
+✅ TWO MODES:
+1. BANKING MODE: Raw transaction data (Transaction_Amount, Account_Balance, etc.)
+2. CREDIT_CARD MODE: Pre-processed V1-V28 + Amount + Time
+
+User selects mode via 'mode' parameter.
+"""
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import pandas as pd
+import numpy as np
+from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
+import json
+import joblib
+from datetime import datetime
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+print("="*80)
+print(" DUAL MODE FRAUD DETECTION")
+print("="*80)
+
+# ============================================
+# SIMPLE EXPLAINER
+# ============================================
+class SimpleExplainer:
+    def __init__(self, model, feature_names):
+        self.model = model
+        self.feature_names = feature_names
+        try:
+            self.importances = model.feature_importances_
+        except:
+            self.importances = np.ones(len(feature_names)) / len(feature_names)
+    
+    def explain(self, X, top_n=5):
+        try:
+            if isinstance(X, pd.DataFrame):
+                feature_values = X.iloc[0].values
+            else:
+                feature_values = X[0] if len(X.shape) > 1 else X
+            
+            contributions = feature_values * self.importances
+            proba = self.model.predict_proba(X)[0][1]
+            
+            abs_contributions = np.abs(contributions)
+            top_indices = np.argsort(abs_contributions)[-top_n:][::-1]
+            
+            top_features = []
+            for idx in top_indices:
+                contribution = float(contributions[idx])
+                top_features.append({
+                    "feature": self.feature_names[idx],
+                    "value": round(float(feature_values[idx]), 4),
+                    "shap_value": round(contribution, 4),
+                    "impact": "increases" if (contribution > 0 and proba > 0.5) or (contribution < 0 and proba < 0.5) else "decreases"
+                })
+            
+            return top_features
+        except:
+            return []
+
+# ============================================
+# GENAI
+# ============================================
+try:
+    from dotenv import load_dotenv
+    load_dotenv(".env")
+    GENAI_ENABLED = bool(os.getenv("GROQ_API_KEY"))
+    if GENAI_ENABLED:
+        from genai_dual import explain_transaction
+except:
+    GENAI_ENABLED = False
+
+# ============================================
+# LOAD BANKING MODEL
+# ============================================
+model_banking = None
+features_banking = None
+threshold_banking = 0.4
+scaler_banking = None
+explainer_banking = None
+
+try:
+    if os.path.exists("models/fraud_model_banking.pkl"):
+        model_banking = joblib.load("models/fraud_model_banking.pkl")
+        model_type_banking = "RandomForest"
+    else:
+        model_banking = XGBClassifier()
+        model_banking.load_model("models/fraud_model_banking.json")
+        model_type_banking = "XGBoost"
+    
+    with open("models/features_banking.json") as f:
+        features_banking = json.load(f)
+    
+    with open("models/model_config_banking.json") as f:
+        threshold_banking = json.load(f).get("default_threshold", 0.4)
+    
+    scaler_banking = joblib.load("models/scaler_banking.pkl")
+    explainer_banking = SimpleExplainer(model_banking, features_banking)
+    
+    print(f"✅ BANKING Model: {model_type_banking} ({len(features_banking)} features)")
+    print(f"   Threshold: {threshold_banking}")
+    
+except Exception as e:
+    print(f"⚠️  BANKING Model: Not available ({e})")
+
+# ============================================
+# LOAD CREDIT CARD MODEL
+# ============================================
+model_cc = None
+features_cc = None
+threshold_cc = 0.4
+explainer_cc = None
+
+try:
+    # Load model
+    model_cc = XGBClassifier()
+    model_cc.load_model("models/fraud_model_final.json")
+    
+    # Load features - try different possible names
+    if os.path.exists("models/feature_names.json"):
+        with open("models/feature_names.json") as f:
+            features_cc = json.load(f)
+    elif os.path.exists("models/features.json"):
+        with open("models/features.json") as f:
+            features_cc = json.load(f)
+    else:
+        raise FileNotFoundError("features.json or feature_names.json not found")
+    
+    # Load config
+    if os.path.exists("models/model_config.json"):
+        with open("models/model_config.json") as f:
+            config = json.load(f)
+            threshold_cc = config.get("default_threshold", config.get("recommended_thresholds", {}).get("balanced", 0.4))
+    
+    explainer_cc = SimpleExplainer(model_cc, features_cc)
+    
+    print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
+    print(f"   Threshold: {threshold_cc}")
+    
+except Exception as e:
+    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
+
+print("="*80)
+print(f"🤖 GenAI: {'✅ ENABLED' if GENAI_ENABLED else '⚠️  FALLBACK'}")
+print("="*80 + "\n")
+
+# ============================================
+# BANKING MODE FEATURES
+# ============================================
+def prepare_banking_features(data):
+    """Prepare banking features matching train_banking.py"""
+    # Raw inputs
+    amount_val = float(data.get('Transaction_Amount', 0))
+    balance_val = float(data.get('Account_Balance', 0))
+    timestamp = data.get('Timestamp', '')
+    txn_type = data.get('Transaction_Type', 'POS')
+    daily_count_val = int(data.get('Daily_Transaction_Count', 1))
+    avg_7d_val = float(data.get('Avg_Transaction_Amount_7d', amount_val))
+    failed_7d_val = int(data.get('Failed_Transaction_Count_7d', 0))
+    card_age_val = int(data.get('Card_Age', 100))
+    distance_val = float(data.get('Transaction_Distance', 500))
+    ip_flag_val = int(data.get('IP_Address_Flag', 0))
+
+    # Time features
+    try:
+        dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+        hour = dt.hour
+        day_of_week = dt.weekday()
+    except:
+        hour = 12
+        day_of_week = 2 # Wednesday
+    
+    is_weekend = 1 if day_of_week >= 5 else 0
+
+    # Amount features
+    amount = amount_val
+    balance = balance_val
+    spend_ratio = amount / (balance + amount + 1)
+
+    # Historical
+    avg_7d = avg_7d_val
+    amount_vs_avg = amount / (avg_7d + 1)
+    within_2x_avg = 1 if amount <= (avg_7d * 2) else 0
+    within_3x_avg = 1 if amount <= (avg_7d * 3) else 0
+
+    # Log transforms
+    amount_log = np.log1p(amount)
+    balance_log = np.log1p(balance)
+
+    # Time patterns
+    late_night = 1 if (hour >= 23 or hour <= 5) else 0
+    very_late_night = 1 if (hour >= 1 and hour <= 4) else 0
+    business_hours = 1 if (hour >= 9 and hour <= 17) else 0
+
+    # Txn type
+    is_atm = 1 if 'ATM' in txn_type.upper() else 0
+    is_online = 1 if 'ONLINE' in txn_type.upper() else 0
+    is_pos = 1 if 'POS' in txn_type.upper() else 0
+    is_transfer = 1 if 'TRANSFER' in txn_type.upper() else 0
+
+    # Activity
+    daily_count = daily_count_val
+    very_high_daily_count = 1 if daily_count > 15 else 0
+    reasonable_daily_count = 1 if daily_count <= 10 else 0
+
+    # Failed
+    failed_7d = failed_7d_val
+    few_failed = 1 if failed_7d <= 2 else 0
+    many_failed = 1 if failed_7d > 5 else 0
+
+    # Card Age
+    card_age = card_age_val
+    very_new_card = 1 if card_age < 7 else 0
+    new_card = 1 if card_age < 30 else 0
+    established_card = 1 if card_age > 90 else 0
+    mature_card = 1 if card_age > 180 else 0
+
+    # Distance
+    distance = distance_val
+    local_txn = 1 if distance < 50 else 0
+    nearby_txn = 1 if distance < 200 else 0
+    far_txn = 1 if distance > 1000 else 0
+    very_far_txn = 1 if distance > 3000 else 0
+
+    # Categories
+    small_amount = 1 if amount < 100 else 0
+    normal_amount = 1 if (amount >= 100 and amount <= 500) else 0
+    large_amount = 1 if amount > 500 else 0
+    very_large_amount = 1 if amount > 2000 else 0
+
+    healthy_balance = 1 if balance > 5000 else 0
+    low_balance = 1 if balance < 1000 else 0
+
+    suspicious_ip = ip_flag_val
+
+    # Trust Score
+    trust_score = (
+        established_card +
+        few_failed +
+        (1 if balance >= amount else 0) +
+        within_2x_avg +
+        reasonable_daily_count
+    )
+    high_trust = 1 if trust_score >= 4 else 0
+
+    # Construct dict
+    features = {
+        'amount': amount, 'balance': balance, 'spend_ratio': spend_ratio, 
+        'amount_vs_avg': amount_vs_avg, 'within_2x_avg': within_2x_avg, 
+        'within_3x_avg': within_3x_avg, 'amount_log': amount_log, 
+        'balance_log': balance_log, 'hour': hour, 'day_of_week': day_of_week, 
+        'is_weekend': is_weekend, 'late_night': late_night, 
+        'very_late_night': very_late_night, 'business_hours': business_hours,
+        'is_atm': is_atm, 'is_online': is_online, 'is_pos': is_pos, 
+        'is_transfer': is_transfer, 'daily_count': daily_count, 
+        'very_high_daily_count': very_high_daily_count, 
+        'reasonable_daily_count': reasonable_daily_count, 'avg_7d': avg_7d, 
+        'failed_7d': failed_7d, 'few_failed': few_failed, 'many_failed': many_failed,
+        'card_age': card_age, 'very_new_card': very_new_card, 
+        'new_card': new_card, 'established_card': established_card, 
+        'mature_card': mature_card, 'distance': distance, 'local_txn': local_txn, 
+        'nearby_txn': nearby_txn, 'far_txn': far_txn, 'very_far_txn': very_far_txn,
+        'small_amount': small_amount, 'normal_amount': normal_amount, 
+        'large_amount': large_amount, 'very_large_amount': very_large_amount,
+        'healthy_balance': healthy_balance, 'low_balance': low_balance,
+        'suspicious_ip': suspicious_ip, 'trust_score': trust_score, 
+        'high_trust': high_trust
+    }
+
+    df = pd.DataFrame([features])
+    
+    # Scale
+    continuous = [
+        'amount', 'balance', 'spend_ratio', 'amount_vs_avg',
+        'amount_log', 'balance_log', 'hour', 'day_of_week',
+        'daily_count', 'avg_7d', 'failed_7d', 'card_age', 'distance', 'trust_score'
+    ]
+    
+    if scaler_banking:
+         try:
+             df[continuous] = scaler_banking.transform(df[continuous])
+         except Exception as e:
+             print(f"Scaling error: {e}")
+    
+    # Return features in correct order, filling missing with 0
+    final_df = pd.DataFrame()
+    for col in features_banking:
+        if col in df.columns:
+            final_df[col] = df[col]
+        else:
+            final_df[col] = 0
+            
+    return final_df
+
+# ============================================
+# CREDIT CARD MODE FEATURES
+# ============================================
+def prepare_credit_card_features(data):
+    """Prepare credit card features (V1-V28 + Amount + Time)"""
+    
+    features = {}
+    
+    # V1-V28 (PCA features)
+    for i in range(1, 29):
+        v_key = f'V{i}'
+        if v_key not in data:
+            raise ValueError(f"Missing {v_key}. Credit card mode requires V1-V28.")
+        features[v_key] = float(data[v_key])
+    
+    # Amount and Time
+    features['Amount'] = float(data.get('Amount', 0))
+    features['Time'] = float(data.get('Time', 0))
+    
+    # Engineered features
+    hour = (features['Time'] / 3600) % 24
+    features['Hour'] = hour
+    features['time_gap'] = 0
+    features['txn_last_1hr'] = 1
+    features['Amount_log'] = np.log1p(features['Amount'])
+    features['amount_roll_mean_3'] = features['Amount']
+    features['amount_roll_std_3'] = 0
+    
+    df = pd.DataFrame([features])
+    
+    # Return only features model expects
+    available = [f for f in features_cc if f in df.columns]
+    return df[available]
+
+# ============================================
+# FALLBACK EXPLANATION
+# ============================================
+def generate_fallback(pred, proba, top_features, amount):
+    risk = "CRITICAL" if proba >= 0.7 else "HIGH" if proba >= 0.5 else "MEDIUM" if proba >= 0.3 else "LOW"
+    
+    if pred == 1:
+        exp = f"⚠️ FRAUD ALERT ({proba*100:.1f}% confidence)\n\n"
+        exp += f"${amount:.2f} transaction flagged as {risk} RISK.\n\nKey factors:\n"
+        for f in top_features[:3]:
+            exp += f"• {f['feature']}: {f['value']:.2f}\n"
+        exp += "\nRecommendation: Block/review."
+    else:
+        exp = f"✅ Normal Transaction ({(1-proba)*100:.1f}% confidence)\n\n"
+        exp += f"${amount:.2f} shows {risk} risk. Recommendation: Approve."
+    
+    return exp
+
+# ============================================
+# API
+# ============================================
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "healthy",
+        "modes": {
+            "banking": {
+                "available": model_banking is not None,
+                "features": len(features_banking) if features_banking else 0
+            },
+            "credit_card": {
+                "available": model_cc is not None,
+                "features": len(features_cc) if features_cc else 0
+            }
+        }
+    })
+
+@app.route("/predict", methods=["POST"])
+@app.route("/api/check-fraud", methods=["POST"])
+def predict():
+    try:
+        data = request.get_json()
+        mode = data.get('mode', 'banking').lower()
+        
+        if mode == 'credit_card':
+            # CREDIT CARD MODE
+            if not model_cc:
+                return jsonify({"status": "error", "message": "Credit card model unavailable"}), 400
+            
+            features_df = prepare_credit_card_features(data)
+            proba = model_cc.predict_proba(features_df)[0][1]
+            pred = int(proba >= 0.4)
+            top_features = explainer_cc.explain(features_df, 5)
+            amount = float(data.get('Amount', 0))
+            threshold = threshold_cc
+            model_name = "Credit Card (V1-V28)"
+            
+        else:
+            # BANKING MODE (default)
+            if not model_banking:
+                return jsonify({"status": "error", "message": "Banking model unavailable"}), 400
+            
+            features_df = prepare_banking_features(data)
+            proba = model_banking.predict_proba(features_df)[0][1]
+            pred = int(proba >= 0.45)
+            top_features = explainer_banking.explain(features_df, 5)
+            amount = float(data.get('Transaction_Amount', 0))
+            threshold = threshold_banking
+            model_name = "Banking"
+        
+        # Risk
+        risk = "CRITICAL" if proba >= 0.7 else "HIGH" if proba >= 0.5 else "MEDIUM" if proba >= 0.4 else "LOW" if proba >= 0.2 else "MINIMAL"
+        
+        # GenAI
+        if GENAI_ENABLED:
+            ai_exp = explain_transaction(top_features, proba, amount, mode)
+        else:
+            ai_exp = generate_fallback(pred, proba, top_features, amount)
+        
+        return jsonify({
+            "status": "success",
+            "mode": mode,
+            "model_used": model_name,
+            "prediction": pred,
+            "fraud_probability": float(proba),
+            "risk_level": risk,
+            "threshold": threshold,
+            "features_used": len(features_df.columns),
+            "top_contributing_features": top_features,
+            "ai_explanation": ai_exp,
+            "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Normal",
+            "transaction_amount": amount
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({"status": "error", "message": str(e), "trace": traceback.format_exc()}), 500
+
+if __name__ == "__main__":
+    print("🚀 Dual Mode Server: http://localhost:5000")
+    print("\nModes:")
+    print("  • banking: Raw transaction data")
+    print("  • credit_card: V1-V28 + Amount + Time\n")
+    app.run(host="0.0.0.0", port=5000, debug=True)
