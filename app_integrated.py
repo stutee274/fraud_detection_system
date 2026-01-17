@@ -28,16 +28,12 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:3000",
-            "https://frauddetectionsystem-production.up.railway.app",
             "https://fraud-detection-system-snowy.vercel.app",
-            "https://*.vercel.app",
-            "https://*.netlify.app",
-            "*"
+            "https://frauddetectionsystem-production.up.railway.app"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "X-API-Key", "Authorization"],
-        "supports_credentials": True,
-        "expose_headers": ["Content-Type", "X-API-Key"]
+        "supports_credentials": True
     }
 })
 
