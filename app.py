@@ -47,7 +47,7 @@ print("="*80)
 # ============================================
 model_banking = None
 features_banking = None
-threshold_banking = 0.55
+threshold_banking = 0.22
 scaler_banking = None
 
 try:
@@ -58,7 +58,9 @@ try:
         features_banking = json.load(f)
     
     with open("models/model_config_banking.json") as f:
-        threshold_banking = json.load(f).get("default_threshold", 0.55)
+        config_banking = json.load(f)
+        threshold_banking = config_banking.get("default_threshold", 0.22)  # Default changed from 0.55 to 0.22
+        print(f"   Threshold: {threshold_banking} (Optimized for {config_banking.get('optimization_target', 'balanced')})")
     
     # Try loading scaler, but don't fail hard if missing (just warn)
     try:
