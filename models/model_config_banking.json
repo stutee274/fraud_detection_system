@@ -1,7 +1,7 @@
 {
   "model_type": "XGBoost",
   "version": "4.0_balanced_high_recall",
-  "trained_date": "2026-01-18T22:21:36.415140",
+  "trained_date": "2026-01-18T22:41:11.240365",
   "features_count": 44,
   "training_samples": 40000,
   "test_auc": 0.8119115923959093,
@@ -10,7 +10,7 @@
   "false_positive_rate": 0.3365257109179313,
   "false_negative_rate": 0.24898848428260192,
   "recommended_threshold": 0.21924161911010742,
-  "default_threshold": 0.21924161911010742,
+  "default_threshold": 0.35,
   "optimization_target": "balanced_high_recall",
   "continuous_features": [
     "amount",
