@@ -185,8 +185,8 @@ CREATE TABLE model_performance_log (
     total_predictions INTEGER,
     total_with_feedback INTEGER,
     accuracy DECIMAL(6, 4),
-    precision DECIMAL(6, 4),
-    recall DECIMAL(6, 4),
+    model_precision DECIMAL(6, 4),
+    model_recall DECIMAL(6, 4),
     f1_score DECIMAL(6, 4),
     
     -- Confusion matrix
@@ -351,8 +351,8 @@ CREATE OR REPLACE FUNCTION calculate_model_accuracy(
 RETURNS TABLE(
     total_with_feedback BIGINT,
     accuracy DECIMAL,
-    precision DECIMAL,
-    recall DECIMAL,
+    model_precision DECIMAL,
+    model_recall DECIMAL,
     f1_score DECIMAL
 ) AS $$
 DECLARE
