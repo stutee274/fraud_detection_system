@@ -482,6 +482,50 @@ def get_daily_stats(days=7, model_type=None):
         print(f"❌ Error fetching daily stats: {e}")
         return []
 
+def get_overall_stats():
+    """Get overall dashboard statistics"""
+    try:
+        with db.get_cursor() as cursor:
+            # 1. Total counts
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_predictions,
+                    COUNT(CASE WHEN actual_class IS NOT NULL THEN 1 END) as with_feedback
+                FROM predictions
+            """)
+            counts = cursor.fetchone()
+            
+            total = counts['total_predictions'] or 0
+            feedback = counts['with_feedback'] or 0
+            rate = round((feedback / total * 100), 1) if total > 0 else 0
+            
+            # 2. Count by model
+            cursor.execute("""
+                SELECT model_type, COUNT(*) as count 
+                FROM predictions 
+                GROUP BY model_type
+            """)
+            by_model_results = cursor.fetchall()
+            by_model = {"banking": 0, "credit_card": 0}
+            for row in by_model_results:
+                if row['model_type'] in by_model:
+                    by_model[row['model_type']] = row['count']
+            
+            return {
+                "total_predictions": total,
+                "with_feedback": feedback,
+                "feedback_rate": rate,
+                "by_model": by_model
+            }
+    except Exception as e:
+        print(f"❌ Error fetching overall stats: {e}")
+        return {
+            "total_predictions": 0,
+            "with_feedback": 0,
+            "feedback_rate": 0,
+            "by_model": {"banking": 0, "credit_card": 0}
+        }
+
 def get_model_performance():
     """Get model performance metrics"""
     try:

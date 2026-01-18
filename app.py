@@ -128,7 +128,8 @@ try:
         get_prediction_by_id,
         get_recent_predictions,
         update_prediction_feedback,
-        get_feedback_count
+        get_feedback_count,
+        get_overall_stats
     )
     
     DB_ENABLED = init_database()
@@ -610,7 +611,7 @@ def submit_feedback(prediction_id):
 
 @app.route("/api/stats", methods=["GET"])
 def get_stats():
-    """Get basic statistics"""
+    """Get overall statistics for dashboard"""
     if not DB_ENABLED:
         return jsonify({
             "total_predictions": 0,
@@ -620,14 +621,10 @@ def get_stats():
         })
     
     try:
-        # This would call database functions
-        return jsonify({
-            "total_predictions": 0,
-            "with_feedback": 0,
-            "feedback_rate": 0,
-            "by_model": {"banking": 0, "credit_card": 0}
-        })
+        stats = get_overall_stats()
+        return jsonify(stats)
     except Exception as e:
+        print(f"❌ Error in get_stats endpoint: {e}")
         return jsonify({
             "total_predictions": 0,
             "with_feedback": 0,
