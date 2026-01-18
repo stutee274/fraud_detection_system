@@ -8,7 +8,8 @@ function ResultDisplay({ result, onFeedback }) {
   if (!result) return null;
 
   const isFraud = result.prediction === 1;
-  const confidence = (result.fraud_probability * 100).toFixed(2);
+  const prob = result.fraud_probability !== undefined ? result.fraud_probability : result.probability;
+  const confidence = (prob * 100).toFixed(2);
   const predictionId = result.prediction_id;
 
   if (!predictionId) {

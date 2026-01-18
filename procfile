@@ -1,1 +1,1 @@
-web: python app_integrated.py
+web: python app.py

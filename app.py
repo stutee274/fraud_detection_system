@@ -508,11 +508,11 @@ def predict():
             "top_contributing_features": top_features,
             "ai_explanation": ai_exp,
             "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Normal",
-            "transaction_amount": amount
+            "transaction_amount": amount,
+            "prediction_id": prediction_id # Always include, even if None
         }
         
-        if prediction_id:
-            response['prediction_id'] = prediction_id
+        print(f"✅ Prediction completed: Mode={mode}, ID={prediction_id}, Prob={proba:.4f}")
         
         return jsonify(response)
         
