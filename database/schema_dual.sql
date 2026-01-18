@@ -450,18 +450,5 @@ BEFORE UPDATE ON feedback
 FOR EACH ROW
 EXECUTE FUNCTION update_feedback_timestamp();
 
-COMMIT;
 
--- ============================================
--- VERIFICATION
--- ============================================
-SELECT 'Database schema created successfully!' as status;
-SELECT '✅ Tables created: model_versions, predictions, feedback, model_performance_log' as info;
-SELECT '✅ Views created: daily_stats_by_model, model_performance_comparison, high_risk_transactions, feedback_summary, hourly_fraud_patterns' as info;
-SELECT '✅ Functions created: get_predictions_needing_feedback(), calculate_model_accuracy()' as info;
-
--- Show created model versions
-SELECT 
-    id, version, model_type, threshold, is_active, description
-FROM model_versions
-ORDER BY model_type, id;
+-- Schema creation complete

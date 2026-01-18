@@ -526,12 +526,7 @@ def setup_schema_if_needed():
                     with open(schema_path, 'r') as f:
                         schema_sql = f.read()
                     
-                    # Remove lines starting with COMMIT or SELECT verification for script stability
-                    clean_sql = "\n".join([line for line in schema_sql.split('\n') 
-                                        if not line.strip().upper().startswith('COMMIT')
-                                        and not line.strip().upper().startswith('SELECT')])
-                    
-                    cursor.execute(clean_sql)
+                    cursor.execute(schema_sql)
                     print("✅ Database schema initialized successfully")
                 else:
                     print(f"❌ Schema file (schema_dual.sql) not found in expected locations.")
