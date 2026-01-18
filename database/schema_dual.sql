@@ -398,7 +398,7 @@ INSERT INTO model_versions (
 ) VALUES (
     'banking_v1.0',
     'banking',
-    'models/fraud_model_banking.pkl',
+    'models/fraud_model_banking.json',
     0.3,
     TRUE,
     'Random Forest model for banking transactions with raw features'

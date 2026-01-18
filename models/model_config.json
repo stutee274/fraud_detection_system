@@ -1,11 +1,11 @@
 {
   "model_version": "final_v1.0",
   "training_date": "2025-12-24T17:09:39.654091",
-  "default_threshold": 0.7,
+  "default_threshold": 0.45,
   "recommended_thresholds": {
     "high_security": 0.3,
-    "balanced": 0.7,
-    "high_precision": 0.7
+    "balanced": 0.45,
+    "high_precision": 0.45
   },
   "performance": {
     "roc_auc": 0.9787007920078555,

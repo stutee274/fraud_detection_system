@@ -28,6 +28,7 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:3000",
+            "http://localhost:5000",
             "https://fraud-detection-system-snowy.vercel.app",
             "https://frauddetectionsystem-production.up.railway.app"
         ],
@@ -416,18 +417,15 @@ def home():
     return jsonify({
         "status": "healthy",
         "service": "Integrated Fraud Detection System",
-        "modes": {
-            "banking": {
-                "available": model_banking is not None,
-                "features": len(features_banking) if features_banking else 0
-            },
-            "credit_card": {
-                "available": model_cc is not None,
-                "features": len(features_cc) if features_cc else 0
-            }
+        "database": {
+            "connected": DB_ENABLED,
+            "mode": "production" if os.getenv('DATABASE_URL') else "local"
         },
-        "database": DB_ENABLED,
-        "genai": GENAI_ENABLED
+        "models": {
+            "banking": "available" if model_banking else "missing",
+            "credit_card": "available" if model_cc else "missing"
+        },
+        "genai": "enabled" if GENAI_ENABLED else "disabled"
     })
 
 @app.route("/predict", methods=["POST"])
@@ -491,8 +489,12 @@ def predict():
                 }
                 
                 prediction_id = save_prediction_to_db(db_data)
+                if not prediction_id:
+                    print("⚠️  Prediction NOT saved to database (save_prediction_to_db returned None)")
             except Exception as e:
                 print(f"❌ Error saving to database: {e}")
+        else:
+            print("ℹ️  Database disabled: Prediction not saved")
         
         response = {
             "status": "success",

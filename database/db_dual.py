@@ -45,12 +45,12 @@ class Database:
         
         if database_url:
             # PRODUCTION MODE (Railway)
-            print("🚀 Using DATABASE_URL (Production Mode)")
+            print(f"🚀 DB Config: DATABASE_URL (Detected)")
+            # Fix for potential host resolution issues in certain environments
             self.config = {'dsn': database_url}
             self.use_dsn = True
         else:
             # DEVELOPMENT MODE (Local)
-            print("🔧 Using individual DB vars (Development Mode)")
             self.config = {
                 'host': os.getenv('DB_HOST', 'localhost'),
                 'port': int(os.getenv('DB_PORT', 5432)),
@@ -58,6 +58,12 @@ class Database:
                 'user': os.getenv('DB_USER', 'postgres'),
                 'password': os.getenv('DB_PASSWORD', 'postgres')
             }
+            # Handle Railway public URL if provided in individual vars
+            host = self.config['host']
+            if host and ('.railway.app' in host or 'railway.internal' in host):
+                 print(f"📡 Using Railway Host: {host}")
+            
+            print(f"🔧 DB Config: {self.config['user']}@{self.config['host']}:{self.config['port']}/{self.config['database']}")
             self.use_dsn = False
     
     def initialize_pool(self, minconn=1, maxconn=20):
@@ -270,7 +276,10 @@ def save_prediction_to_db(prediction_data):
             return prediction_id
             
     except Exception as e:
-        print(f"❌ Error saving prediction: {e}")
+        print(f"❌ Error saving prediction: {str(e)}")
+        # Print first few keys of prediction_data to help debug
+        debug_keys = list(prediction_data.keys())[:5]
+        print(f"   Data keys: {debug_keys}")
         import traceback
         traceback.print_exc()
         return None
@@ -527,8 +536,18 @@ def setup_schema_if_needed():
                 else:
                     print(f"❌ Schema file (schema_dual.sql) not found in expected locations.")
             else:
-                # print("✅ Database tables found")
-                pass
+                # Tables exist, but let's ensure model_versions is populated
+                cursor.execute("SELECT COUNT(*) FROM model_versions")
+                count = cursor.fetchone()['count']
+                if count == 0:
+                    print("⚠️  model_versions table is empty. Seeding initial data...")
+                    cursor.execute("""
+                        INSERT INTO model_versions (version, model_type, model_path, threshold, is_active)
+                        VALUES 
+                        ('banking_v1.0', 'banking', 'models/fraud_model_banking.json', 0.55, TRUE),
+                        ('cc_v1.0', 'credit_card', 'models/fraud_model_final.json', 0.7, TRUE)
+                    """)
+                    print("✅ Seeding complete")
                 
     except Exception as e:
         print(f"❌ Error setting up database schema: {e}")
