@@ -70,13 +70,13 @@ try:
         scaler_banking = None
         
     model_banking = temp_model
-    print(f"✅ BANKING Model: XGBoost ({len(features_banking)} features)")
+    print(f" BANKING Model: XGBoost ({len(features_banking)} features)")
     print(f"   Threshold: {threshold_banking}")
     
 except Exception as e:
     model_banking = None
     features_banking = None
-    print(f"⚠️  BANKING Model: Not available ({e})")
+    print(f"  BANKING Model: Not available ({e})")
 
 # ============================================
 # LOAD CREDIT CARD MODEL
@@ -106,17 +106,17 @@ try:
                 config = json.load(f)
                 threshold_cc = config.get("default_threshold", 0.4)
         
-        print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
+        print(f" CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
         print(f"   Threshold: {threshold_cc}")
     else:
-        print("⚠️  CREDIT_CARD Model: Features file missing")
+        print(" CREDIT_CARD Model: Features file missing")
         model_cc = None
     
 except Exception as e:
     model_cc = None
     features_cc = None
-    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
-    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
+    print(f" CREDIT_CARD Model: Not available ({e})")
+    print(f" CREDIT_CARD Model: Not available ({e})")
 
 # ============================================
 # LOAD DATABASE
@@ -136,11 +136,11 @@ try:
     
     DB_ENABLED = init_database()
     if DB_ENABLED:
-        print("✅ Database: CONNECTED")
+        print(" Database: CONNECTED")
     else:
-        print("⚠️  Database: DISABLED (continuing without DB)")
+        print("  Database: DISABLED (continuing without DB)")
 except Exception as e:
-    print(f"⚠️  Database: DISABLED ({e})")
+    print(f" Database: DISABLED ({e})")
 
 # ============================================
 # LOAD ANALYTICS & RETRAINING
@@ -151,9 +151,9 @@ try:
     
     register_analytics_routes(app)
     register_retraining_routes(app)
-    print("✅ Analytics & Retraining: ENABLED")
+    print(" Analytics & Retraining: ENABLED")
 except Exception as e:
-    print(f"⚠️  Analytics & Retraining: DISABLED ({e})")
+    print(f"  Analytics & Retraining: DISABLED ({e})")
     auto_trigger_retraining = None
 
 # ============================================
@@ -401,13 +401,13 @@ def generate_fallback(pred, proba, top_features, amount):
     risk = "CRITICAL" if proba >= 0.7 else "HIGH" if proba >= 0.5 else "MEDIUM" if proba >= 0.3 else "LOW"
     
     if pred == 1:
-        exp = f"⚠️ FRAUD ALERT ({proba*100:.1f}% confidence)\n\n"
+        exp = f" FRAUD ALERT ({proba*100:.1f}% confidence)\n\n"
         exp += f"${amount:.2f} transaction flagged as {risk} RISK.\n\nKey factors:\n"
         for f in top_features[:3]:
             exp += f"• {f['feature']}: {f['value']:.2f}\n"
         exp += "\nRecommendation: Block/review."
     else:
-        exp = f"✅ Normal Transaction ({(1-proba)*100:.1f}% confidence)\n\n"
+        exp = f" Normal Transaction ({(1-proba)*100:.1f}% confidence)\n\n"
         exp += f"${amount:.2f} shows {risk} risk. Recommendation: Approve."
     
     return exp
@@ -495,9 +495,9 @@ def predict():
                 if not prediction_id:
                     print("⚠️  Prediction NOT saved to database (save_prediction_to_db returned None)")
             except Exception as e:
-                print(f"❌ Error saving to database: {e}")
+                print(f" Error saving to database: {e}")
         else:
-            print("ℹ️  Database disabled: Prediction not saved")
+            print("Database disabled: Prediction not saved")
         
         response = {
             "status": "success",
@@ -510,12 +510,12 @@ def predict():
             "features_used": len(features_df.columns),
             "top_contributing_features": top_features,
             "ai_explanation": ai_exp,
-            "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Normal",
+            "message": " FRAUD DETECTED" if pred == 1 else " Normal",
             "transaction_amount": amount,
             "prediction_id": prediction_id # Always include, even if None
         }
         
-        print(f"✅ Prediction completed: Mode={mode}, ID={prediction_id}, Prob={proba:.4f}")
+        print(f" Prediction completed: Mode={mode}, ID={prediction_id}, Prob={proba:.4f}")
         
         return jsonify(response)
         
@@ -595,7 +595,7 @@ def submit_feedback(prediction_id):
                 try:
                     auto_trigger_retraining()
                 except Exception as e:
-                    print(f"⚠️  Auto-trigger check failed: {e}")
+                    print(f"  Auto-trigger check failed: {e}")
             
             return jsonify({
                 "status": "success",
@@ -626,7 +626,7 @@ def get_stats():
         stats = get_overall_stats()
         return jsonify(stats)
     except Exception as e:
-        print(f"❌ Error in get_stats endpoint: {e}")
+        print(f" Error in get_stats endpoint: {e}")
         return jsonify({
             "total_predictions": 0,
             "with_feedback": 0,
@@ -649,8 +649,8 @@ def shutdown_session(exception=None):
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
-    print("\n🚀 Starting Integrated Fraud Detection Server...")
-    print(f"📍 Port: {port}\n")
+    print(" Starting Integrated Fraud Detection Server...")
+    print(f" Port: {port}\n")
     print("Modes:")
     print("  • banking: Raw transaction data")
     print("  • credit_card: V1-V28 + Amount + Time\n")

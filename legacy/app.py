@@ -103,11 +103,11 @@ try:
     scaler_banking = joblib.load("models/scaler_banking.pkl")
     explainer_banking = SimpleExplainer(model_banking, features_banking)
     
-    print(f"✅ BANKING Model: {model_type_banking} ({len(features_banking)} features)")
+    print(f" BANKING Model: {model_type_banking} ({len(features_banking)} features)")
     print(f"   Threshold: {threshold_banking}")
     
 except Exception as e:
-    print(f"⚠️  BANKING Model: Not available ({e})")
+    print(f"  BANKING Model: Not available ({e})")
 
 # ============================================
 # LOAD CREDIT CARD MODEL
@@ -140,14 +140,14 @@ try:
     
     explainer_cc = SimpleExplainer(model_cc, features_cc)
     
-    print(f"✅ CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
+    print(f" CREDIT_CARD Model: XGBoost ({len(features_cc)} features)")
     print(f"   Threshold: {threshold_cc}")
     
 except Exception as e:
-    print(f"⚠️  CREDIT_CARD Model: Not available ({e})")
+    print(f"  CREDIT_CARD Model: Not available ({e})")
 
 print("="*80)
-print(f"🤖 GenAI: {'✅ ENABLED' if GENAI_ENABLED else '⚠️  FALLBACK'}")
+print(f" GenAI: {' ENABLED' if GENAI_ENABLED else ' FALLBACK'}")
 print("="*80 + "\n")
 
 # ============================================
@@ -339,13 +339,13 @@ def generate_fallback(pred, proba, top_features, amount):
     risk = "CRITICAL" if proba >= 0.7 else "HIGH" if proba >= 0.5 else "MEDIUM" if proba >= 0.3 else "LOW"
     
     if pred == 1:
-        exp = f"⚠️ FRAUD ALERT ({proba*100:.1f}% confidence)\n\n"
+        exp = f" FRAUD ALERT ({proba*100:.1f}% confidence)\n\n"
         exp += f"${amount:.2f} transaction flagged as {risk} RISK.\n\nKey factors:\n"
         for f in top_features[:3]:
             exp += f"• {f['feature']}: {f['value']:.2f}\n"
         exp += "\nRecommendation: Block/review."
     else:
-        exp = f"✅ Normal Transaction ({(1-proba)*100:.1f}% confidence)\n\n"
+        exp = f" Normal Transaction ({(1-proba)*100:.1f}% confidence)\n\n"
         exp += f"${amount:.2f} shows {risk} risk. Recommendation: Approve."
     
     return exp
@@ -422,7 +422,7 @@ def predict():
             "features_used": len(features_df.columns),
             "top_contributing_features": top_features,
             "ai_explanation": ai_exp,
-            "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Normal",
+            "message": " FRAUD DETECTED" if pred == 1 else " Normal",
             "transaction_amount": amount
         })
         
@@ -431,7 +431,7 @@ def predict():
         return jsonify({"status": "error", "message": str(e), "trace": traceback.format_exc()}), 500
 
 if __name__ == "__main__":
-    print("🚀 Dual Mode Server: http://localhost:5000")
+    print(" Dual Mode Server: http://localhost:5000")
     print("\nModes:")
     print("  • banking: Raw transaction data")
     print("  • credit_card: V1-V28 + Amount + Time\n")

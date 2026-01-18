@@ -23,13 +23,13 @@ app = Flask(__name__)
 CORS(app)
 
 print("="*80)
-print("🎯 BANKING FRAUD DETECTION - MATCHED TO YOUR MODEL")
+print("BANKING FRAUD DETECTION - MATCHED TO YOUR MODEL")
 print("="*80)
 
 # ============================================
 # LOAD BANKING MODEL
 # ============================================
-print("\n📦 Loading Banking Model...")
+print(" Loading Banking Model...")
 
 model_bank = None
 features_bank = None
@@ -294,7 +294,7 @@ def generate_ai_explanation(prediction, probability, top_features, amount):
         explanation += "\n**Recommendation:** Block or review this transaction immediately."
     
     else:
-        explanation = f"✅ **Transaction Appears Normal** ({(1-probability)*100:.1f}% confidence)\n\n"
+        explanation = f" **Transaction Appears Normal** ({(1-probability)*100:.1f}% confidence)\n\n"
         explanation += f"This ${amount:,.2f} transaction shows **{risk} RISK** indicators.\n\n"
         explanation += "**Recommendation:** Transaction can proceed."
     
@@ -362,7 +362,7 @@ def predict():
             "features_used": len(features_bank),
             "top_contributing_features": top_features,
             "ai_explanation": ai_explanation,
-            "message": "⚠️ FRAUD DETECTED" if pred == 1 else "✅ Transaction Normal",
+            "message": "FRAUD DETECTED" if pred == 1 else "Transaction Normal",
             "transaction_amount": amount
         }
         
@@ -378,6 +378,6 @@ def predict():
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Server...")
-    print("📍 http://localhost:5000\n")
+    print(" Starting Server...")
+    print(" http://localhost:5000\n")
     app.run(host="0.0.0.0", port=5000, debug=True)

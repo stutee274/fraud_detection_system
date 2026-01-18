@@ -74,10 +74,10 @@ def retrain_credit_card_with_dataset():
             return {"status": "error", "message": "creditcard.csv not found"}
         
         original_df = pd.read_csv(dataset_path)
-        print(f"✅ Loaded {len(original_df):,} original samples")
+        print(f" Loaded {len(original_df):,} original samples")
         
         # Step 2: Load feedback data
-        print("📊 Loading feedback samples...")
+        print(" Loading feedback samples...")
         feedback_data = get_feedback_data_for_retraining('credit_card', limit=1000)
         
         if len(feedback_data) < RETRAIN_CONFIG['min_feedback_samples']:
@@ -87,12 +87,12 @@ def retrain_credit_card_with_dataset():
             }
         
         feedback_df = pd.DataFrame(feedback_data)
-        print(f"✅ Loaded {len(feedback_df)} feedback samples")
+        print(f" Loaded {len(feedback_df)} feedback samples")
         
         # Step 3: Combine datasets
-        print("🔗 Combining datasets...")
+        print(" Combining datasets...")
         combined_df = pd.concat([original_df, feedback_df], ignore_index=True)
-        print(f"✅ Combined: {len(combined_df):,} total samples")
+        print(f"Combined: {len(combined_df):,} total samples")
         
         # Prepare features
         feature_cols = [col for col in combined_df.columns if col != 'Class']
@@ -110,7 +110,7 @@ def retrain_credit_card_with_dataset():
         print(f"   Train: {len(X_train):,}, Test: {len(X_test):,}")
         
         # Step 5: Train new model
-        print("🤖 Training XGBoost...")
+        print(" Training XGBoost...")
         
         scale_pos_weight = sum(y_train==0) / sum(y_train==1)
         model = XGBClassifier(
@@ -124,10 +124,10 @@ def retrain_credit_card_with_dataset():
         )
         
         model.fit(X_train, y_train, verbose=False)
-        print("✅ Training complete")
+        print(" Training complete")
         
         # Step 6: Evaluate new model
-        print("📊 Evaluating new model...")
+        print(" Evaluating new model...")
         y_pred = model.predict(X_test)
         y_proba = model.predict_proba(X_test)[:, 1]
         
@@ -146,7 +146,7 @@ def retrain_credit_card_with_dataset():
         print(f"   ROC-AUC:   {new_metrics['roc_auc']:.4f}")
         
         # Step 7: Compare with old model
-        print("\n🔍 Comparing with current model...")
+        print("Comparing with current model...")
         
         with local_db.get_cursor() as cursor:
             cursor.execute("""
@@ -180,10 +180,10 @@ def retrain_credit_card_with_dataset():
             print(f"   Change:  {improvement:+.4f} ({improvement*100:+.2f}%)")
             
             if improvement >= RETRAIN_CONFIG['improvement_threshold']:
-                print(f"   ✅ Improvement above threshold ({RETRAIN_CONFIG['improvement_threshold']})")
+                print(f"    Improvement above threshold ({RETRAIN_CONFIG['improvement_threshold']})")
                 should_deploy = True
             else:
-                print(f"   ⚠️  Improvement below threshold, keeping current model")
+                print(f"     Improvement below threshold, keeping current model")
         else:
             print("   No current active model, will deploy new one")
             should_deploy = True
@@ -196,7 +196,7 @@ def retrain_credit_card_with_dataset():
         
         model_path = f"models/fraud_model_cc_retrained_{timestamp_unique}.json"
         model.save_model(model_path)
-        print(f"\n💾 Saved: {model_path}")
+        print(f" Saved: {model_path}")
         
         # Backup old model if exists
         if current_model and current_model.get('model_path') and os.path.exists(current_model['model_path']):
@@ -207,7 +207,7 @@ def retrain_credit_card_with_dataset():
             
             import shutil
             shutil.copy2(current_model['model_path'], backup_path)
-            print(f"📦 Backed up old model: {backup_path}")
+            print(f" Backed up old model: {backup_path}")
         
         # Step 9: Save to database
         version_name = f"cc_retrained_{timestamp_unique}"
@@ -243,9 +243,9 @@ def retrain_credit_card_with_dataset():
                 # Activate new
                 cursor.execute("UPDATE model_versions SET is_active = TRUE WHERE id = %s", (new_version_id,))
             
-            print(f"✅ NEW MODEL ACTIVATED: {version_name}")
+            print(f" NEW MODEL ACTIVATED: {version_name}")
         else:
-            print(f"⚠️  New model saved but NOT activated (current model is better)")
+            print(f" New model saved but NOT activated (current model is better)")
         
         local_db.close_all()
         
@@ -264,7 +264,7 @@ def retrain_credit_card_with_dataset():
         }
         
     except Exception as e:
-        print(f"❌ CC retraining error: {e}")
+        print(f" CC retraining error: {e}")
         import traceback
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
@@ -286,7 +286,7 @@ def retrain_banking_with_dataset():
         time.sleep(0.1)
         
         print(f"\n{'='*70}")
-        print("🔄 BANKING RETRAINING (WITH SYNTHETIC DATASET)")
+        print("BANKING RETRAINING (WITH SYNTHETIC DATASET)")
         print(f"{'='*70}")
         
         # Get fresh connection
@@ -294,7 +294,7 @@ def retrain_banking_with_dataset():
         local_db.initialize_pool()
         
         # Step 1: Load synthetic banking dataset
-        print("📊 Loading synthetic banking dataset...")
+        print(" Loading synthetic banking dataset...")
         
         # Try multiple possible dataset names
         dataset_paths = [
@@ -312,13 +312,13 @@ def retrain_banking_with_dataset():
                 break
         
         if not dataset_path:
-            print(f"❌ Banking dataset not found in data/ folder")
+            print(f" Banking dataset not found in data/ folder")
             print(f"   Tried: {', '.join([os.path.basename(p) for p in dataset_paths])}")
-            print(f"⚠️  Falling back to feedback-only retraining")
+            print(f"  Falling back to feedback-only retraining")
             return retrain_banking_with_feedback_only()
         
         original_df = pd.read_csv(dataset_path)
-        print(f"✅ Loaded {len(original_df):,} original samples from {os.path.basename(dataset_path)}")
+        print(f" Loaded {len(original_df):,} original samples from {os.path.basename(dataset_path)}")
         
         # Ensure Class column exists - handle multiple possible names
         if 'Class' not in original_df.columns:
@@ -353,7 +353,7 @@ def retrain_banking_with_dataset():
                 original_df = original_df.rename(columns={old_name: new_name})
         
         # Step 2: Load feedback data
-        print("📊 Loading feedback samples...")
+        print(" Loading feedback samples...")
         feedback_data = get_feedback_data_for_retraining('banking', limit=1000)
         
         if len(feedback_data) < RETRAIN_CONFIG['min_feedback_samples']:
@@ -363,10 +363,10 @@ def retrain_banking_with_dataset():
             }
         
         feedback_df = pd.DataFrame(feedback_data)
-        print(f"✅ Loaded {len(feedback_df)} feedback samples")
+        print(f" Loaded {len(feedback_df)} feedback samples")
         
         # Step 3: Align columns between original and feedback data
-        print("🔗 Aligning datasets...")
+        print(" Aligning datasets...")
         
         # Get common columns (excluding Class)
         original_features = [col for col in original_df.columns if col != 'Class']
@@ -376,7 +376,7 @@ def retrain_banking_with_dataset():
         common_features = list(set(original_features) & set(feedback_features))
         
         if len(common_features) < 3:
-            print(f"⚠️  Too few common features ({len(common_features)}), using feedback only")
+            print(f" Too few common features ({len(common_features)}), using feedback only")
             return retrain_banking_with_feedback_only()
         
         print(f"   Using {len(common_features)} common features")
@@ -388,7 +388,7 @@ def retrain_banking_with_dataset():
         # Step 4: Combine datasets
         print("🔗 Combining datasets...")
         combined_df = pd.concat([original_subset, feedback_subset], ignore_index=True)
-        print(f"✅ Combined: {len(combined_df):,} total samples")
+        print(f" Combined: {len(combined_df):,} total samples")
         
         # Prepare features
         X = combined_df[common_features]
@@ -405,7 +405,7 @@ def retrain_banking_with_dataset():
         print(f"   Train: {len(X_train):,}, Test: {len(X_test):,}")
         
         # Step 6: Train new model
-        print("🤖 Training RandomForest...")
+        print(" Training RandomForest...")
         
         model = RandomForestClassifier(
             n_estimators=100,
@@ -416,10 +416,10 @@ def retrain_banking_with_dataset():
         )
         
         model.fit(X_train, y_train)
-        print("✅ Training complete")
+        print(" Training complete")
         
         # Step 7: Evaluate new model
-        print("📊 Evaluating new model...")
+        print(" Evaluating new model...")
         y_pred = model.predict(X_test)
         y_proba = model.predict_proba(X_test)[:, 1]
         
@@ -438,7 +438,7 @@ def retrain_banking_with_dataset():
         print(f"   ROC-AUC:   {new_metrics['roc_auc']:.4f}")
         
         # Step 8: Compare with old model
-        print("\n🔍 Comparing with current model...")
+        print(" Comparing with current model...")
         
         with local_db.get_cursor() as cursor:
             cursor.execute("""

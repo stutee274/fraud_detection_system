@@ -435,23 +435,23 @@ DB_ENABLED = True
 # ============================================
 # LOAD MODEL AND DEPENDENCIES
 # ============================================
-print("\n🚀 Fraud Detection API with Database Starting...")
+print("Fraud Detection API with Database Starting...")
 print("="*60)
 
 # Load model
 model = XGBClassifier()
 try:
     model.load_model("models/fraud_model_final.json")
-    print("✅ Model loaded: fraud_model_final.json")
+    print(" Model loaded: fraud_model_final.json")
 except:
     model.load_model("models/fraud_model_improved.json")
-    print("✅ Model loaded: fraud_model_improved.json")
+    print(" Model loaded: fraud_model_improved.json")
 
 # Load features list
 with open("models/features.json") as f:
     FEATURES = json.load(f)
-    print(f"✅ Model ready. Features: {len(FEATURES)}")
-    print(f"✅ Default threshold: {DEFAULT_THRESHOLD}")
+    print(f" Model ready. Features: {len(FEATURES)}")
+    print(f" Default threshold: {DEFAULT_THRESHOLD}")
 
 # Load scaler
 amt_scaler = joblib.load("models/amount_scaler.pkl")
@@ -460,18 +460,18 @@ amt_scaler = joblib.load("models/amount_scaler.pkl")
 try:
     from shap_explainer import ShapExplainer
     shap_explainer = ShapExplainer(model, FEATURES)
-    print("✅ SHAP explainer loaded")
+    print(" SHAP explainer loaded")
 except Exception as e:
-    print(f"⚠️  SHAP not available: {e}")
+    print(f"  SHAP not available: {e}")
     shap_explainer = None
 
 # Load GenAI
 try:
     from genai import explain_transaction
     genai_explain = explain_transaction
-    print("✅ GenAI loaded")
+    print(" GenAI loaded")
 except Exception as e:
-    print(f"⚠️  GenAI not available: {e}")
+    print(f" GenAI not available: {e}")
     genai_explain = None
 
 # ============================================
@@ -489,10 +489,10 @@ try:
     )
     
     init_database()
-    print("✅ Database connected")
+    print(" Database connected")
     DB_ENABLED = True
 except Exception as e:
-    print(f"⚠️  Database not available: {e}")
+    print(f" Database not available: {e}")
     DB_ENABLED = False
 
 # ============================================
@@ -505,13 +505,13 @@ try:
     register_analytics_routes(app)
     register_retraining_routes(app)
 except Exception as e:
-    print(f"⚠️  Routes registration failed: {e}")
+    print(f" Routes registration failed: {e}")
 
 print("="*60)
-print("✅ ALL SYSTEMS READY")
-print(f"✅ SHAP: {'ENABLED' if shap_explainer else 'DISABLED'}")
-print(f"✅ GenAI: {'ENABLED' if genai_explain else 'DISABLED'}")
-print(f"✅ Database: {'ENABLED' if DB_ENABLED else 'DISABLED'}")
+print(" ALL SYSTEMS READY")
+print(f" SHAP: {'ENABLED' if shap_explainer else 'DISABLED'}")
+print(f" GenAI: {'ENABLED' if genai_explain else 'DISABLED'}")
+print(f" Database: {'ENABLED' if DB_ENABLED else 'DISABLED'}")
 print("="*60)
 
 # ============================================
@@ -564,7 +564,7 @@ def get_genai_explanation(top_features, fraud_prob):
         explanation = genai_explain(shap_features, fraud_prob)
         return explanation
     except Exception as e:
-        print(f"⚠️  GenAI explanation failed: {e}")
+        print(f"  GenAI explanation failed: {e}")
         return None
 
 # ============================================
@@ -574,13 +574,13 @@ def get_genai_explanation(top_features, fraud_prob):
 def predict_explain():
     """
     Main prediction endpoint with SHAP and GenAI explanations
-    ✅ FIXED: Now properly passes V1-V28 to database
+     FIXED: Now properly passes V1-V28 to database
     """
     try:
         # Get request data
         data = request.get_json()
         
-        # ✅ IMPORTANT: Store original V1-V28 values
+        #  IMPORTANT: Store original V1-V28 values
         original_v_features = {}
         for i in range(1, 29):
             v_key = f'V{i}'
@@ -598,10 +598,10 @@ def predict_explain():
         
         # Determine message
         if pred == 1:
-            message = "⚠️ FRAUD DETECTED"
+            message = " FRAUD DETECTED"
             recommendation = "FLAG - Suspicious activity detected"
         else:
-            message = "✅ Transaction Normal"
+            message = " Transaction Normal"
             recommendation = "APPROVE - Transaction appears normal"
         
         # Get SHAP explanations
@@ -610,19 +610,19 @@ def predict_explain():
             try:
                 top_features = shap_explainer.get_top_features(X, n=5)
             except Exception as e:
-                print(f"⚠️  SHAP explanation failed: {e}")
+                print(f"  SHAP explanation failed: {e}")
         
         # Get GenAI explanation
         ai_explanation = get_genai_explanation(top_features, proba)
         
-        # ✅ CRITICAL FIX: Save to database with ALL V features
+        #  CRITICAL FIX: Save to database with ALL V features
         prediction_id = None
         if DB_ENABLED:
             try:
                 prediction_record = {
                     'transaction_time': data.get('Time', 0),
                     'amount': float(data.get('Amount', 0)),
-                    # ✅ Include ALL original V1-V28 features
+                    #  Include ALL original V1-V28 features
                     **original_v_features,
                     'prediction': pred,
                     'fraud_probability': float(proba),
@@ -634,7 +634,7 @@ def predict_explain():
                 
                 prediction_id = save_prediction(prediction_record)
             except Exception as e:
-                print(f"❌ Error saving to database: {e}")
+                print(f" Error saving to database: {e}")
         
         # Build response
         response = {
@@ -733,7 +733,7 @@ def submit_feedback(prediction_id):
         )
         
         if success:
-            # ✅ Check if should trigger auto-retraining
+            #  Check if should trigger auto-retraining
             try:
                 feedback_count = get_feedback_count()
                 triggered = check_and_trigger_retraining(feedback_count)

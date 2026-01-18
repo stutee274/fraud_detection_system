@@ -16,13 +16,13 @@ from imblearn.under_sampling import RandomUnderSampler
 from features.features_eng import engineer_features
 
 print("="*70)
-print("🎯 FINAL PRODUCTION MODEL TRAINING")
+print(" FINAL PRODUCTION MODEL TRAINING")
 print("="*70)
 
 # ============================================
 # 1. LOAD AND PREPARE DATA
 # ============================================
-print("\n📂 Step 1: Loading data...")
+print(" Step 1: Loading data...")
 df = pd.read_csv("data/creditcard.csv")
 print(f"Dataset shape: {df.shape}")
 print(f"Fraud cases: {df['Class'].sum()} ({df['Class'].mean()*100:.4f}%)")
@@ -30,7 +30,7 @@ print(f"Fraud cases: {df['Class'].sum()} ({df['Class'].mean()*100:.4f}%)")
 # ============================================
 # 2. FEATURE ENGINEERING
 # ============================================
-print("\n🔧 Step 2: Engineering features...")
+print(" Step 2: Engineering features...")
 df = engineer_features(df)
 
 X = df.drop("Class", axis=1)
@@ -42,7 +42,7 @@ print(f"Feature list: {X.columns.tolist()}")
 # ============================================
 # 3. FEATURE SCALING
 # ============================================
-print("\n⚖️  Step 3: Scaling Amount feature...")
+print("  Step 3: Scaling Amount feature...")
 amt_scaler = StandardScaler()
 X["Amount"] = amt_scaler.fit_transform(X[["Amount"]])
 print(f"Amount scaled - Mean: {amt_scaler.mean_[0]:.2f}, Std: {amt_scaler.scale_[0]:.2f}")
@@ -50,7 +50,7 @@ print(f"Amount scaled - Mean: {amt_scaler.mean_[0]:.2f}, Std: {amt_scaler.scale_
 # ============================================
 # 4. TRAIN-TEST SPLIT
 # ============================================
-print("\n📊 Step 4: Splitting data...")
+print(" Step 4: Splitting data...")
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, 
     test_size=0.2, 
@@ -127,12 +127,12 @@ model.fit(
     verbose=False
 )
 
-print("✅ Training complete!")
+print(" Training complete!")
 
 # ============================================
 # 7. EVALUATION
 # ============================================
-print("\n📊 Step 7: Evaluating model...")
+print(" Step 7: Evaluating model...")
 
 y_pred_proba = model.predict_proba(X_test)[:, 1]
 
@@ -140,7 +140,7 @@ y_pred_proba = model.predict_proba(X_test)[:, 1]
 thresholds_to_test = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 results = []
 
-print("\n📈 Performance at different thresholds:")
+print(" Performance at different thresholds:")
 for threshold in thresholds_to_test:
     y_pred = (y_pred_proba >= threshold).astype(int)
     
@@ -196,15 +196,15 @@ amount_importance = feature_importance[
 print(f"\nAmount-related features: {amount_importance*100:.1f}% total importance")
 
 if amount_importance > 0.4:
-    print("⚠️  WARNING: Amount features dominate (>40%)")
+    print("  WARNING: Amount features dominate (>40%)")
     print("   Model may rely too heavily on transaction size")
 else:
-    print("✅ Good balance between amount and V features")
+    print(" Good balance between amount and V features")
 
 # ============================================
 # 9. SAVE MODEL
 # ============================================
-print("\n💾 Step 9: Saving model...")
+print(" Step 9: Saving model...")
 
 model.save_model("models/fraud_model_final.json")
 joblib.dump(amt_scaler, "models/amount_scaler.pkl")
@@ -246,7 +246,7 @@ config = {
 with open("models/model_config.json", "w") as f:
     json.dump(config, f, indent=2)
 
-print(f"\n✅ Saved:")
+print(f" Saved:")
 print(f"  - models/fraud_model_final.json")
 print(f"  - models/amount_scaler.pkl")
 print(f"  - models/features.json")
@@ -256,17 +256,17 @@ print(f"  - models/model_config.json")
 # 10. FINAL SUMMARY
 # ============================================
 print("\n" + "="*70)
-print("✅ TRAINING COMPLETE!")
+print(" TRAINING COMPLETE!")
 print("="*70)
 
-print(f"\n📊 Model Performance Summary:")
+print(f" Model Performance Summary:")
 print(f"  ROC-AUC: {roc_auc_score(y_test, y_pred_proba):.4f}")
 print(f"  Best F1 Score: {best_f1['f1']:.4f} (at threshold {best_f1['threshold']:.2f})")
 print(f"  Recommended Threshold: {best_f1['threshold']:.2f}")
 
-print(f"\n🎯 Next Steps:")
+print(f" Next Steps:")
 print(f"  1. Update app_complete_gemini.py to load 'fraud_model_final.json'")
 print(f"  2. Restart Flask: python app_complete_gemini.py")
 print(f"  3. Test with real fraud samples: python test_real_fraud_samples.py")
 
-print("\n" + "="*70)
+print("="*70)

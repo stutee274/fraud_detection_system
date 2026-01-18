@@ -21,15 +21,15 @@ import os
 from datetime import datetime
 
 print("="*80)
-print("🎯 BALANCED HIGH RECALL MODEL - 80-85% RECALL, 20-30% FPR")
+print("BALANCED HIGH RECALL MODEL - 80-85% RECALL, 20-30% FPR")
 print("="*80)
 
 # Load data
 df = pd.read_csv('data/synthetic_fraud.csv')
 y_column = 'Fraud_Label'
 
-print(f"✅ Loaded {len(df)} transactions")
-print(f"   Fraud: {df[y_column].sum()} ({df[y_column].mean()*100:.2f}%)")
+print(f"Loaded {len(df)} transactions")
+print(f"Fraud: {df[y_column].sum()} ({df[y_column].mean()*100:.2f}%)")
 
 # Feature engineering (same as before)
 df['Timestamp'] = pd.to_datetime(df['Timestamp'])
@@ -136,7 +136,7 @@ X_test_scaled = X_test.copy()
 X_train_scaled[continuous_features] = scaler.fit_transform(X_train[continuous_features])
 X_test_scaled[continuous_features] = scaler.transform(X_test[continuous_features])
 
-print("\n🎯 Training BALANCED model...")
+print(" Training BALANCED model...")
 
 # OPTIMIZED PARAMETERS for 80-85% recall with 20-30% FPR
 fraud_ratio = (y_train == 0).sum() / (y_train == 1).sum()
@@ -158,7 +158,7 @@ model = XGBClassifier(
 )
 
 model.fit(X_train_scaled, y_train)
-print("✅ Training complete!")
+print("Training complete!")
 
 # Find optimal threshold for 80-85% recall with <30% FPR
 y_pred_proba = model.predict_proba(X_test_scaled)[:, 1]
@@ -168,7 +168,7 @@ fpr_curve, tpr_curve, thresholds = roc_curve(y_test, y_pred_proba)
 best_threshold = None
 best_score = -1
 
-print("\n🔍 Finding optimal threshold...")
+print(" Finding optimal threshold...")
 for i, threshold in enumerate(thresholds):
     recall = tpr_curve[i]
     fpr = fpr_curve[i]
@@ -183,7 +183,7 @@ for i, threshold in enumerate(thresholds):
 
 # If no perfect threshold found, find closest
 if best_threshold is None:
-    print("⚠️  No threshold meets both criteria, finding best compromise...")
+    print(" No threshold meets both criteria, finding best compromise...")
     for i, threshold in enumerate(thresholds):
         recall = tpr_curve[i]
         fpr = fpr_curve[i]
@@ -196,10 +196,10 @@ if best_threshold is None:
 
 optimal_threshold = best_threshold if best_threshold is not None else 0.25
 
-print(f"\n📊 Optimal Threshold: {optimal_threshold:.4f}")
+print(f" Optimal Threshold: {optimal_threshold:.4f}")
 
 # Test multiple thresholds
-print("\n📊 Testing thresholds:")
+print(" Testing thresholds:")
 test_thresholds = [0.15, 0.20, 0.25, 0.30, optimal_threshold, 0.35, 0.40]
 results = []
 
@@ -219,9 +219,9 @@ for thresh in test_thresholds:
     
     status = ""
     if 0.80 <= recall <= 0.90 and fpr <= 0.30:
-        status = "✅ TARGET MET!"
+        status = " TARGET MET!"
     elif 0.75 <= recall <= 0.90 and fpr <= 0.35:
-        status = "🟡 Close"
+        status = " Close"
     
     print(f"   Threshold {thresh:.2f}: Recall={recall*100:.1f}%, FPR={fpr*100:.1f}%, Precision={precision*100:.1f}% {status}")
 
@@ -229,7 +229,7 @@ for thresh in test_thresholds:
 best_result = max(results, key=lambda x: x['recall'] * 2 - x['fpr'] if 0.75 <= x['recall'] <= 0.90 else -1)
 recommended_threshold = best_result['threshold']
 
-print(f"\n🎯 Selected Threshold: {recommended_threshold:.4f}")
+print(f" Selected Threshold: {recommended_threshold:.4f}")
 
 y_pred = (y_pred_proba >= recommended_threshold).astype(int)
 
@@ -252,26 +252,26 @@ print(f"False Positives: {cm[0][1]:>6}  (False Alarm)")
 print(f"False Negatives: {cm[1][0]:>6}  (Missed Fraud)")
 print(f"True Positives:  {cm[1][1]:>6}  (Caught Fraud)")
 
-print(f"\n📊 KEY METRICS:")
-print(f"   🎯 Recall: {recall*100:.1f}%")
-print(f"   ⚠️  False Positive Rate: {false_positive_rate*100:.1f}%")
-print(f"   ❌ False Negative Rate: {false_negative_rate*100:.1f}%")
-print(f"   ✅ Precision: {precision*100:.1f}%")
-print(f"   📈 F1 Score: {f1:.4f}")
-print(f"   📈 ROC AUC: {auc:.4f}")
+print(f" KEY METRICS:")
+print(f"    Recall: {recall*100:.1f}%")
+print(f"     False Positive Rate: {false_positive_rate*100:.1f}%")
+print(f"    False Negative Rate: {false_negative_rate*100:.1f}%")
+print(f"    Precision: {precision*100:.1f}%")
+print(f"    F1 Score: {f1:.4f}")
+print(f"    ROC AUC: {auc:.4f}")
 
 print("\n🎯 TARGET ACHIEVEMENT:")
 if 0.80 <= recall <= 0.90:
-    print(f"   ✅ Recall {recall*100:.1f}% in target range (80-90%)!")
+    print(f"    Recall {recall*100:.1f}% in target range (80-90%)!")
 else:
-    print(f"   ⚠️  Recall {recall*100:.1f}% outside target (80-90%)")
+    print(f"     Recall {recall*100:.1f}% outside target (80-90%)")
 
 if false_positive_rate <= 0.30:
-    print(f"   ✅ False Positive Rate {false_positive_rate*100:.1f}% <= 30% TARGET MET!")
+    print(f"    False Positive Rate {false_positive_rate*100:.1f}% <= 30% TARGET MET!")
 elif false_positive_rate <= 0.35:
-    print(f"   🟡 False Positive Rate {false_positive_rate*100:.1f}% close to target")
+    print(f"    False Positive Rate {false_positive_rate*100:.1f}% close to target")
 else:
-    print(f"   ❌ False Positive Rate {false_positive_rate*100:.1f}% too high")
+    print(f"    False Positive Rate {false_positive_rate*100:.1f}% too high")
 
 # Save
 os.makedirs('models', exist_ok=True)
@@ -302,12 +302,12 @@ config = {
 with open('models/model_config_banking.json', 'w') as f:
     json.dump(config, f, indent=2)
 
-print("\n💾 Model saved!")
+print(" Model saved!")
 
 print("\n" + "="*80)
-print("🎉 BALANCED HIGH RECALL MODEL COMPLETE!")
+print(" BALANCED HIGH RECALL MODEL COMPLETE!")
 print("="*80)
-print(f"✅ Recall: {recall*100:.1f}% - Catches {int(recall*100)} out of 100 frauds")
-print(f"⚠️  FPR: {false_positive_rate*100:.1f}% - Flags {int(false_positive_rate*100)} out of 100 normal as fraud")
-print(f"💡 This is a good balance for fraud prevention!")
+print(f" Recall: {recall*100:.1f}% - Catches {int(recall*100)} out of 100 frauds")
+print(f"  FPR: {false_positive_rate*100:.1f}% - Flags {int(false_positive_rate*100)} out of 100 normal as fraud")
+print(f" This is a good balance for fraud prevention!")
 print("="*80)
