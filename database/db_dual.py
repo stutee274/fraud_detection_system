@@ -523,6 +523,18 @@ def setup_schema_if_needed():
                         break
                 
                 if schema_path:
+                    # Racy initialization check: wait a bit and re-check if someone else is doing it
+                    import time, random
+                    time.sleep(random.random() * 2) # Random delay 0-2s
+                    
+                    # Re-check if table exists now
+                    with db.get_cursor() as check_cursor:
+                        check_cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'predictions')")
+                        if check_cursor.fetchone()['exists']:
+                            print("ℹ️  Schema already initialized by another worker.")
+                            return True
+
+                    print(f"📄 Reading schema from: {schema_path}")
                     with open(schema_path, 'r') as f:
                         schema_sql = f.read()
                     

@@ -1,4 +1,4 @@
--- schema_dual_complete.sql - Complete Dual Mode Database Schema
+-- schema_dual_complete.sql - v2.1.0 (Fixed Keywords)
 -- Supports BOTH Banking (raw features) and Credit Card (V1-V28) models
 -- Includes timestamp tracking for banking transactions
 
